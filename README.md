@@ -10,6 +10,9 @@ Sito pubblico: **https://liebig.pplx.app**
 - **Quotazioni di mercato osservate**: mediana, minimo e massimo delle inserzioni attive abbinate a ciascuna serie. Non ci sono prezzi di listino: il catalogo riporta solo prezzi reali rilevati, più una stima per comparabili dove il mercato diretto manca.
 - **Indice di rarità relativa** in cinque livelli, calcolato su disponibilità sul mercato, anno di emissione e livello di prezzo.
 - **Monitoraggio aste**: le inserzioni in formato asta abbinate a una serie, con confronto tra prezzo corrente e mediana della serie.
+- **Inventario personale**: per ogni serie una spunta di possesso più i campi album, pagina
+  e note, con filtri «serie che possiedo» e «serie mancanti», statistiche sulla raccolta ed
+  esportazione/importazione in JSON. I dati restano nel browser di chi consulta il sito.
 - **Filtri** per fascia di prezzo, intervallo personalizzato, anno, rarità, edizione italiana, tipo di dato di prezzo e presenza di aste in corso.
 
 ## Struttura
@@ -25,9 +28,15 @@ build_dataset.py           pipeline: sorgenti -> catalogo.json
 parse_pages.py             parser di pagine eBay salvate su file
 AGGIORNAMENTO_GIORNALIERO.md  procedura di aggiornamento quotidiano
 afil_rows.json             tavola di concordanza delle serie (6.544 righe)
-mlc_all.json               dati storici complementari
-ebay_active.json           ultimo rilevamento delle inserzioni attive
+mlc_all.json               elenco di riferimento complementare (354 voci)
+ebay_active.json           ultimo rilevamento delle inserzioni attive (9.609 inserzioni)
+sorgenti_ritirate/         rilevamenti non più usati dalla pipeline, tenuti per ricostruzione
+automazione/stato.json     stato dell'ultima esecuzione della procedura pianificata
+DATI.md                    documentazione di ogni file di dati: contenuto, origine, ruolo
 ```
+
+Il dettaglio di ogni sorgente (campi, origine, frequenza di aggiornamento, dati
+volutamente non versionati) è in [DATI.md](DATI.md).
 
 ## Come rigenerare il catalogo
 
@@ -36,6 +45,11 @@ python build_dataset.py
 ```
 
 Legge le sorgenti nella radice del repository, abbina le inserzioni alle serie (per numero Sanguinetti e, in mancanza, per titolo), calcola quotazioni, scostamenti e rarità, e riscrive `site/data/catalogo.json`.
+
+La pipeline è deterministica: rieseguita sulle sorgenti presenti nel repository
+riproduce esattamente il catalogo pubblicato (verificato il 14 settembre 2026, tutte le
+1.871 voci identiche; cambia solo il campo `meta.aggiornato`, che riporta l'ora di
+esecuzione).
 
 L'abbinamento usa una serie di espressioni regolari sui titoli delle inserzioni per estrarre il numero di serie (`SANG. 123`, `serie n° 123`, `123 (1898)`, `S.123`, …), scartando i numeri incompatibili con l'anno di emissione dichiarato.
 

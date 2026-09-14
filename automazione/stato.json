@@ -1,0 +1,18 @@
+{
+ "run": 1,
+ "data": "2026-09-14",
+ "meta": {
+  "aggiornato": "2026-09-14T05:43:14+00:00",
+  "n_serie": 1871,
+  "n_serie_it": 1305,
+  "anno_min": 1872,
+  "anno_max": 1975,
+  "n_inserzioni": 9609,
+  "n_inserzioni_abbinate": 7066,
+  "serie_con_mercato": 1576,
+  "mediana_globale": 8.98
+ },
+ "note": "raccolta unica a 14 query via goto_url; ebay_intl_raw.json ritirato in storico",
+ "site_id": "f66e2022-9062-4cce-803c-aa62b7fa7739",
+ "url_pubblico": "https://liebig.pplx.app"
+}
