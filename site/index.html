@@ -240,8 +240,8 @@
       <h3 class="h-min">3. Prezzi di mercato</h3>
       <p>Le inserzioni <b>attive</b> su eBay.it vengono lette direttamente dalle pagine di ricerca con quattordici
         chiavi diverse — sei in italiano (<span class="mono">figurine liebig</span>, <span class="mono">liebig
-        serie</span>, <span class="mono">liebig chromo</span>, <span class="mono">liebig cromolitografia</span>,
-        <span class="mono">figurine liebig serie completa</span>, <span class="mono">serie liebig italiana</span>) e
+        sang</span>, <span class="mono">liebig serie completa</span>, <span class="mono">chromo liebig ita</span>,
+        <span class="mono">liebig figurine ita</span>, <span class="mono">liebig estratto di carne figurine</span>) e
         otto rivolte al mercato estero (<span class="mono">liebig sammelbilder serie</span>,
         <span class="mono">liebig chromos serie complete</span>, <span class="mono">liebig trade cards set</span>,
         <span class="mono">liebig bilderserie</span> e altre) — e deduplicate per codice inserzione. L'abbinamento
@@ -285,15 +285,18 @@
         e i filtri <b>Serie che possiedo</b> e <b>Serie mancanti</b> permettono di leggere il catalogo come inventario
         o come lista dei desideri. La barra sopra la tabella riporta quante serie possiedi, la percentuale sul totale e
         il valore di mercato complessivo della raccolta.</p>
-      <p class="warn">Questi dati sono <b>tuoi e restano nel tuo browser</b>, conservati in cookie di lunga durata del solo sito del catalogo: non vengono inviati a nessun server e non
-        sono visibili ad altri. Di conseguenza non si trasferiscono automaticamente su un altro dispositivo e si
-        perdono se cancelli i cookie o i dati di navigazione. Usa <b>Esporta la collezione</b> per salvare un file di backup e
-        <b>Importa da file</b> per rileggerlo altrove. L'aggiornamento giornaliero delle quotazioni non tocca le tue
+      <p class="warn">Questi dati sono conservati nel <b>database del catalogo</b>, non più nel browser: si ritrovano
+        identici da qualunque dispositivo e non si perdono cancellando i dati di navigazione. Il catalogo è però a
+        <b>utente singolo</b> e senza autenticazione: esiste un solo inventario, e chiunque raggiunga questo indirizzo
+        può vederlo e modificarlo. Usa <b>Esporta la collezione</b> per tenerne comunque un backup e
+        <b>Importa da file</b> per ricaricarlo. L'aggiornamento giornaliero delle quotazioni non tocca le tue
         annotazioni.</p>
 
       <h3 class="h-min">7. Aggiornamento</h3>
-      <p>Un'attività pianificata rilegge ogni giorno le inserzioni attive, ricostruisce i prezzi e ripubblica il
-        catalogo a questo stesso indirizzo. La data dell'ultimo rilevamento è indicata in testa alla pagina.</p>
+      <p>Un'attività pianificata rilegge ogni giorno le inserzioni attive, ricostruisce i prezzi e li scrive nel
+        database. La data dell'ultimo rilevamento è indicata in testa alla pagina. Ogni rilevamento resta in archivio:
+        la scheda di una serie mostra perciò l'<b>andamento della quotazione nel tempo</b>, che si allunga di un punto
+        al giorno.</p>
     </div>
   </section>
 </main>
@@ -313,6 +316,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

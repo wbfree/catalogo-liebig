@@ -5,12 +5,17 @@ Input:
   afil_rows.json  -> tabella serie (numerazione Sanguinetti / Unificato / De Magistris / CIL)
   ebay_active.json -> inserzioni eBay.it attive rilevate via browser
 Output:
-  site/data/catalogo.json
+  database Supabase (tabelle serie / rilevamenti / quotazioni / inserzioni)
+
+La connessione si legge da SUPABASE_DB_URL, nel file .env o nell'ambiente.
 """
-import json, re, statistics, unicodedata, collections, datetime, os, sys
+import json, re, statistics, unicodedata, collections, datetime, os, sys, pathlib
+import psycopg
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(BASE, "site", "data", "catalogo.json")
+# quanti rilevamenti passati conservano anche le singole inserzioni
+# (lo storico delle quotazioni non viene mai potato)
+RILEVAMENTI_CON_INSERZIONI = 7
 
 # ---------------------------------------------------------------- serie
 def anno_int(s):
@@ -29,7 +34,7 @@ def pulisci_titolo(t):
 RARE_RE = re.compile(r"\b(rarissim|molto\s+rar|assai\s+rar|rar[ao]\b|introvabil|difficil\w*\s+(da\s+)?trovar|scarsissim)", re.I)
 
 def carica_serie():
-    rows = json.load(open(os.path.join(BASE, "afil_rows.json")))
+    rows = json.load(open(os.path.join(BASE, "afil_rows.json"), encoding="utf-8"))
     per_num = {}
     for r in rows:
         naz, sang, uni, dem, cil, anno, titolo, commento = r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7]
@@ -103,7 +108,7 @@ def carica_ebay():
         p = os.path.join(BASE, fn)
         if not os.path.exists(p):
             continue
-        for r in json.load(open(p)):
+        for r in json.load(open(p, encoding="utf-8")):
             if r.get("u") and r["u"] not in visti:
                 visti.add(r["u"])
                 rows.append(r)
@@ -158,10 +163,90 @@ def tokens(s):
     s = "".join(c for c in s if unicodedata.category(c) != "Mn")
     return [w for w in re.findall(r"[a-z]{4,}", s) if w not in STOP]
 
+# ---------------------------------------------------------------- Supabase
+def db_url():
+    """Stringa di connessione da .env accanto allo script, o dall'ambiente."""
+    env = pathlib.Path(BASE) / ".env"
+    if env.exists():
+        for riga in env.read_text(encoding="utf-8").splitlines():
+            if riga.startswith("SUPABASE_DB_URL="):
+                return riga.split("=", 1)[1].strip()
+    url = os.environ.get("SUPABASE_DB_URL")
+    if not url:
+        sys.exit("Manca SUPABASE_DB_URL: mettila in .env o nell'ambiente.")
+    return url
+
+def scrivi_supabase(serie, meta):
+    """Pubblica il rilevamento in una sola transazione.
+
+    Il nuovo rilevamento nasce non corrente: diventa corrente solo in fondo,
+    quando quotazioni e inserzioni sono gia' scritte. Se qualcosa fallisce a
+    meta' strada, il sito continua a servire il rilevamento precedente.
+    """
+    oggi = datetime.date.today()
+    with psycopg.connect(db_url(), connect_timeout=30, autocommit=False) as conn:
+        cur = conn.cursor()
+
+        # 1. anagrafica: cambia solo se la fonte viene rivista
+        cur.executemany("""
+            insert into public.serie
+                   (num, titolo, anno, anno_raw, nfig, uni, dem, cil, it, edizioni, nota_rarita)
+            values (%s,  %s,     %s,   %s,       %s,   %s,  %s,  %s,  %s, %s,       %s)
+            on conflict (num) do update set
+                titolo = excluded.titolo, anno = excluded.anno, anno_raw = excluded.anno_raw,
+                nfig = excluded.nfig, uni = excluded.uni, dem = excluded.dem, cil = excluded.cil,
+                it = excluded.it, edizioni = excluded.edizioni, nota_rarita = excluded.nota_rarita
+        """, [(s["num"], s["titolo"], s["anno"], s["anno_raw"], s["nfig"],
+               s["uni"] or None, s["dem"] or None, s["cil"] or None,
+               s["it"], s["edizioni"], s["nota_rarita"]) for s in serie])
+
+        # 2. testata del rilevamento, ancora non corrente
+        rid = cur.execute(
+            "insert into public.rilevamenti (data, aggiornato, corrente, meta)"
+            " values (%s, now(), false, %s) returning id",
+            (oggi, json.dumps(meta, ensure_ascii=False))).fetchone()[0]
+
+        # 3. quotazioni: una riga per serie, e' lo storico
+        with cur.copy("""copy public.quotazioni
+            (rilevamento_id, serie_num, p_med, p_min, p_max, p_stima, scost, fonte_prezzo,
+             fascia, offerte, offerte_sciolte, offerte_tot, aste, rarita_score, percentile, rarita)
+            from stdin""") as cp:
+            for s in serie:
+                cp.write_row((rid, s["num"], s["p_med"], s["p_min"], s["p_max"], s["p_stima"],
+                              s["scost"], s["fonte_prezzo"], s["fascia"], s["offerte"],
+                              s["offerte_sciolte"], s["offerte_tot"], s["aste"],
+                              s["rarita_score"], s["percentile"], s["rarita"]))
+
+        # 4. inserzioni abbinate
+        n_ins = 0
+        with cur.copy("""copy public.inserzioni
+            (rilevamento_id, serie_num, titolo, prezzo, url, asta, singola, sped_gratis,
+             ed, anno_ins, abbinamento) from stdin""") as cp:
+            for s in serie:
+                for l in s["_inserzioni"]:
+                    cp.write_row((rid, s["num"], l["t"], l["prezzo"], l["url"], l["asta"],
+                                  l["singola"], l["sped"], l["ed"], l["anno_ins"], l["match"]))
+                    n_ins += 1
+
+        # 5. pubblicazione atomica
+        cur.execute("update public.rilevamenti set corrente = false where corrente")
+        cur.execute("update public.rilevamenti set corrente = true where id = %s", (rid,))
+
+        # 6. potatura: lo storico delle quotazioni resta, le inserzioni no
+        potati = cur.execute("""
+            delete from public.inserzioni where rilevamento_id in (
+                select id from public.rilevamenti order by data desc, id desc
+                offset %s) returning 1""", (RILEVAMENTI_CON_INSERZIONI,)).rowcount
+        conn.commit()
+
+    print(f"rilevamento {rid} del {oggi}: {len(serie)} quotazioni, {n_ins} inserzioni"
+          + (f", potate {potati} inserzioni di rilevamenti vecchi" if potati > 0 else ""))
+
+
 def main():
     serie = carica_serie()
     listings = carica_ebay()
-    print(f"serie italiane 1872-1939: {len(serie)}")
+    print(f"serie in catalogo: {len(serie)}")
     print(f"inserzioni eBay con prezzo: {len(listings)}")
 
     per_serie = collections.defaultdict(list)
@@ -240,8 +325,9 @@ def main():
         else:
             s["p_min"] = s["p_med"] = s["p_max"] = None
             s["fonte_prezzo"] = None
-        s["listings"] = sorted(pool, key=lambda l: l["prezzo"])[:8]
-        s["sciolte"] = sorted([l for l in pool_all if l["singola"]], key=lambda l: l["prezzo"])[:4]
+        # nel database finiscono tutte le inserzioni del pool considerato
+        # (serie complete e figurine sciolte): quali mostrarne lo decide il sito
+        s["_inserzioni"] = sorted(pool_all, key=lambda l: l["prezzo"])
 
     # ---------------------------------------------------------- stima da comparabili
     # mediana per decennio + numero di figurine, fallback decennio, fallback globale
@@ -280,7 +366,6 @@ def main():
         nota = 20 if s["nota_rarita"] else 0
         score = round(scarsita + eta + nota, 1)
         s["rarita_score"] = score
-        del s["nota_rarita"]
 
     # rarità RELATIVA: quintili sul punteggio composito all'interno del corpus
     ordinate = sorted(serie, key=lambda x: x["rarita_score"])
@@ -293,13 +378,6 @@ def main():
             if pct <= soglia:
                 s["rarita"] = lab
                 break
-
-    # link di ricerca eBay preimpostato per serie
-    import urllib.parse as up
-    for s in serie:
-        q = f"liebig {s['num']} {s['titolo']}"
-        s["ebay_q"] = "https://www.ebay.it/sch/i.html?_nkw=" + up.quote_plus(f"liebig sang {s['num']}")
-        s["ebay_q2"] = "https://www.ebay.it/sch/i.html?_nkw=" + up.quote_plus(f"liebig {s['titolo'][:40]}")
 
     # fasce di prezzo
     for s in serie:
@@ -318,12 +396,7 @@ def main():
         "serie_con_mercato": sum(1 for s in serie if s["offerte"] > 0),
         "mediana_globale": round(globale, 2),
     }
-    os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    json.dump({"meta": meta, "serie": serie}, open(OUT, "w"), ensure_ascii=False)
-    print(json.dumps(meta, indent=2, ensure_ascii=False))
-    print("scritto", OUT)
-    print(collections.Counter(s["rarita"] for s in serie))
-    print(collections.Counter(s["fascia"] for s in serie))
+    scrivi_supabase(serie, meta)
 
 if __name__ == "__main__":
     main()

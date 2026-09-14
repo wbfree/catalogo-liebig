@@ -299,3 +299,8 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--oxblood-2); outline-o
 @media (max-width:640px){
   .mycoll{flex-direction:column; align-items:flex-start}
 }
+
+/* ------------------------------------------------- storico in scheda */
+.d-storico{margin:var(--space-3) 0 var(--space-2); min-height:42px}
+.d-storico canvas{max-width:100%}
+.d-attesa{margin:0; font-size:var(--text-sm); color:var(--ink-3)}

@@ -12,20 +12,30 @@ Sito pubblico: **https://liebig.pplx.app**
 - **Monitoraggio aste**: le inserzioni in formato asta abbinate a una serie, con confronto tra prezzo corrente e mediana della serie.
 - **Inventario personale**: per ogni serie una spunta di possesso più i campi album, pagina
   e note, con filtri «serie che possiedo» e «serie mancanti», statistiche sulla raccolta ed
-  esportazione/importazione in JSON. I dati restano nel browser di chi consulta il sito.
+  esportazione/importazione in JSON. I dati stanno nel database, quindi si ritrovano da
+  qualunque dispositivo. Il catalogo è a utente singolo e senza autenticazione: esiste un
+  solo inventario, e chi raggiunge l'indirizzo del sito può modificarlo.
+- **Storico delle quotazioni**: ogni rilevamento resta in archivio, e la scheda di una
+  serie mostra l'andamento del prezzo mediano nel tempo.
 - **Filtri** per fascia di prezzo, intervallo personalizzato, anno, rarità, edizione italiana, tipo di dato di prezzo e presenza di aste in corso.
 
 ## Struttura
 
 ```
-site/                      sito statico (nessun backend)
+site/                      sito statico: legge i dati da Supabase, nessun backend proprio
   index.html
   css/app.css
+  js/config.js             indirizzo del progetto Supabase e chiave pubblica anon
+  js/db.js                 client PostgREST minimo
   js/app.js
-  data/catalogo.json       dataset pubblicato
-  version.txt              data dell'ultimo rilevamento pubblicato
-build_dataset.py           pipeline: sorgenti -> catalogo.json
+  version.txt              marcatore dell'ultima pubblicazione del sito
+supabase/
+  migrations/*.sql         schema, viste, politiche di accesso
+  applica.py               applica le migrazioni non ancora applicate
+build_dataset.py           pipeline: sorgenti -> database Supabase
 parse_pages.py             parser di pagine eBay salvate su file
+requirements.txt           dipendenze Python
+.env                       credenziali Supabase (non versionato; vedi .env.example)
 AGGIORNAMENTO_GIORNALIERO.md  procedura di aggiornamento quotidiano
 afil_rows.json             tavola di concordanza delle serie (6.544 righe)
 mlc_all.json               elenco di riferimento complementare (354 voci)
@@ -41,21 +51,25 @@ volutamente non versionati) è in [DATI.md](DATI.md).
 ## Come rigenerare il catalogo
 
 ```bash
+pip install -r requirements.txt
+cp .env.example .env        # e compila le credenziali Supabase
+python supabase/applica.py  # solo la prima volta: crea schema, viste e policy
 python build_dataset.py
 ```
 
-Legge le sorgenti nella radice del repository, abbina le inserzioni alle serie (per numero Sanguinetti e, in mancanza, per titolo), calcola quotazioni, scostamenti e rarità, e riscrive `site/data/catalogo.json`.
+Legge le sorgenti nella radice del repository, abbina le inserzioni alle serie (per numero Sanguinetti e, in mancanza, per titolo), calcola quotazioni, scostamenti e rarità, e scrive un nuovo rilevamento nel database Supabase.
 
-La pipeline è deterministica: rieseguita sulle sorgenti presenti nel repository
-riproduce esattamente il catalogo pubblicato (verificato il 14 settembre 2026, tutte le
-1.871 voci identiche; cambia solo il campo `meta.aggiornato`, che riporta l'ora di
-esecuzione).
+Ogni esecuzione aggiunge un rilevamento invece di sostituire il precedente: le quotazioni di tutti i giorni passati restano in archivio nella tabella `quotazioni`, ed è da lì che la scheda di ogni serie ricava l'andamento del prezzo nel tempo. La scrittura avviene in una sola transazione e il nuovo rilevamento diventa quello corrente solo alla fine, quindi un'esecuzione interrotta lascia il sito sui dati del giorno prima.
+
+La pipeline è deterministica: rieseguita sulle stesse sorgenti riproduce gli stessi
+valori (verificato il 14 settembre 2026 confrontando il contenuto del database con il
+catalogo pubblicato in precedenza come file: tutte le 1.871 voci identiche su 19 campi).
 
 L'abbinamento usa una serie di espressioni regolari sui titoli delle inserzioni per estrarre il numero di serie (`SANG. 123`, `serie n° 123`, `123 (1898)`, `S.123`, …), scartando i numeri incompatibili con l'anno di emissione dichiarato.
 
 ## Aggiornamento giornaliero
 
-Ogni mattina alle 07:30 (Europa/Roma) una procedura automatica rilegge le inserzioni attive su eBay.it con quattordici query, ricostruisce il dataset, confronta il risultato con il rilevamento precedente e ripubblica il sito. Il dettaglio dei passaggi è in `AGGIORNAMENTO_GIORNALIERO.md`.
+Ogni mattina alle 07:30 (Europa/Roma) una procedura automatica rilegge le inserzioni attive su eBay.it con quattordici query, ricostruisce il dataset e scrive un nuovo rilevamento nel database. Il sito non va più ripubblicato ogni giorno: essendo i dati nel database, le pagine pubblicate cambiano solo quando cambia il codice. Il dettaglio dei passaggi è in `AGGIORNAMENTO_GIORNALIERO.md`.
 
 Le inserzioni concluse non vengono raccolte: richiedono un accesso autenticato.
 

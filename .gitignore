@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 storico/
 *.zip
+.env
+.env.*
+!.env.example

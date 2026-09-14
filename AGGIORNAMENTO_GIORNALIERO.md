@@ -1,7 +1,8 @@
 # Procedura di aggiornamento giornaliero — Catalogo Liebig
 
-Obiettivo: rileggere le inserzioni attive su eBay.it, ricostruire il dataset e ripubblicare
-il sito allo stesso indirizzo, segnalando nuove aste e scostamenti di prezzo.
+Obiettivo: rileggere le inserzioni attive su eBay.it e scrivere un nuovo rilevamento nel
+database, segnalando nuove aste e scostamenti di prezzo. Il sito legge i dati dal database
+e non va ripubblicato ogni giorno (vedi passo 4).
 
 Perimetro: tutte le 1.871 serie Liebig emesse dal 1872 al 1975, in qualunque edizione
 linguistica (1.305 hanno un'edizione italiana).
@@ -65,10 +66,9 @@ print(len(rows))
 ```
 
 Salva l'elenco in `/home/user/workspace/ebay_active.json` (lista di `{t, p, r, u}`).
-Prima di sovrascriverlo, copia il file precedente in
-`/home/user/workspace/storico/ebay_active_AAAA-MM-GG.json` e conserva la copia del
-dataset precedente in `/home/user/workspace/storico/catalogo_AAAA-MM-GG.json`:
-serve per il confronto.
+Una copia del file precedente in `/home/user/workspace/storico/ebay_active_AAAA-MM-GG.json`
+resta utile per rifare i conti su una giornata, ma non serve più al confronto del passo 3:
+i rilevamenti sono tutti in archivio nel database.
 
 ## 2. Ricostruzione del dataset
 
@@ -76,18 +76,45 @@ serve per il confronto.
 cd /home/user/workspace && timeout 500 python build_dataset.py
 ```
 
-Scrive `/home/user/workspace/site/data/catalogo.json`.
+Scrive un nuovo rilevamento nel database Supabase e lo rende corrente. La scrittura è in
+una sola transazione: se si interrompe, il sito continua a mostrare il rilevamento del
+giorno prima. Serve `.env` con `SUPABASE_DB_URL` (vedi `.env.example`).
+
+Lo script stampa in coda l'identificativo del rilevamento, il numero di quotazioni e di
+inserzioni scritte.
 
 ## 3. Confronto con il rilevamento precedente
 
-Dal confronto fra il catalogo precedente e quello nuovo, individua:
+Non serve più conservare copie del dataset: il confronto è una interrogazione, perché
+tutti i rilevamenti sono in archivio.
 
-- **nuove aste in corso** (`aste` passato da 0 a >0, oppure nuovi URL in `listings` con `asta: true`);
-- **scostamenti di prezzo** rilevanti: variazione di `p_med` superiore al 15 % in valore
-  assoluto, o serie che passano di fascia (`fascia`);
-- **serie entrate o uscite dal mercato** (`fonte_prezzo` che cambia fra `mercato` e `stima`).
+```sql
+-- variazioni di quotazione fra gli ultimi due rilevamenti
+with ultimi as (
+  select id, data, row_number() over (order by data desc, id desc) as n
+  from rilevamenti
+)
+select s.num, s.titolo,
+       vecchia.p_med as prima, nuova.p_med as adesso,
+       round((nuova.p_med - vecchia.p_med) / nullif(vecchia.p_med, 0) * 100, 1) as var_pct,
+       vecchia.fonte_prezzo as fonte_prima, nuova.fonte_prezzo as fonte_adesso,
+       vecchia.aste as aste_prima, nuova.aste as aste_adesso
+from quotazioni nuova
+join ultimi   un on un.id = nuova.rilevamento_id and un.n = 1
+join ultimi   uv on uv.n = 2
+join quotazioni vecchia on vecchia.rilevamento_id = uv.id and vecchia.serie_num = nuova.serie_num
+join serie s on s.num = nuova.serie_num
+where nuova.aste > vecchia.aste                                   -- nuove aste
+   or vecchia.fonte_prezzo is distinct from nuova.fonte_prezzo    -- entrata/uscita dal mercato
+   or abs(nuova.p_med - vecchia.p_med) / nullif(vecchia.p_med, 0) > 0.15
+order by abs(nuova.p_med - vecchia.p_med) / nullif(vecchia.p_med, 0) desc;
+```
 
-## 4. Ripubblicazione
+## 4. Pubblicazione
+
+**Non serve ripubblicare il sito ogni giorno.** Le pagine leggono i dati dal database:
+appena il nuovo rilevamento diventa corrente, il sito lo mostra. Il deploy va rifatto solo
+quando cambia il codice in `site/`:
 
 ```
 deploy_website(project_path="/home/user/workspace/site",
@@ -95,14 +122,31 @@ deploy_website(project_path="/home/user/workspace/site",
                entry_point="index.html")
 ```
 
-Stesso `project_path` ⇒ stesso indirizzo, nessun nuovo artifact.
+Stesso `project_path` ⇒ stesso indirizzo, nessun nuovo artifact. Quando lo si rifà,
+scrivere prima in `site/version.txt` la riga `aggiornato il <data e ora>` con la data
+effettiva, e controllare poi con `curl -s https://liebig.pplx.app/version.txt` che il sito
+pubblico sia stato davvero sostituito.
 
-## 5. Notifica
+## 5. Verifica del rilevamento
+
+```sql
+select data, corrente, meta->>'n_inserzioni' as lette,
+       meta->>'n_inserzioni_abbinate' as abbinate,
+       meta->>'serie_con_mercato' as con_mercato
+from rilevamenti order by data desc limit 3;
+```
+
+Se `con_mercato` crolla rispetto ai giorni precedenti, la raccolta del passo 1 è andata
+male: conviene ripeterla invece di lasciare pubblicato il rilevamento nuovo. Per tornare
+indietro basta spostare il flag:
+
+```sql
+update rilevamenti set corrente = false where corrente;
+update rilevamenti set corrente = true  where id = <id del rilevamento buono>;
+```
+
+## 6. Notifica
 
 Invia una notifica sintetica in italiano solo se ci sono novità: numero di nuove aste,
 prime 5 serie per variazione di quotazione, eventuali serie appena comparse sul mercato.
 Se nulla è cambiato in modo significativo, non notificare.
-
-## Verifica pubblicazione
-
-Prima del deploy, scrivi in site/version.txt la riga "aggiornato il <data e ora>" con la data del rilevamento. Dopo publish_website, controlla con `curl -s https://liebig.pplx.app/version.txt` che il sito pubblico sia stato effettivamente aggiornato.

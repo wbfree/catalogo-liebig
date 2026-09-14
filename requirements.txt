@@ -1,0 +1,4 @@
+# pipeline del catalogo
+psycopg[binary]>=3.2
+# solo per parse_pages.py, il parser delle pagine eBay salvate su file
+beautifulsoup4>=4.12

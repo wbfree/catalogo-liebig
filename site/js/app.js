@@ -12,112 +12,146 @@
   let SERIE = [], META = {}, VIEW = [];
 
   /* ------------------------------------------------------------------ la mia collezione
-     Archivio: { "<numero serie>": { own: true, album: "", pag: "", note: "" } }
-     Conservato nel browser dell'utente in cookie di lunga durata, suddivisi in
-     segmenti da 3.400 caratteri per rispettare il limite dei 4 KB per cookie.
-     Nessun dato lascia il browser. Se i cookie non sono scrivibili, l'archivio
-     resta in memoria per la sessione corrente e l'avviso lo segnala. */
-  const CK = '__Host-lbg', CK_MAX = 3400, CK_N = 40;
-  let COLL = {}, COLL_OK = true;
+     Archivio su Supabase, tabella `inventario`: una riga per serie, senza
+     proprietario, perche' il catalogo e' a utente singolo. Sostituisce i
+     cookie della versione precedente, che a qualche centinaio di serie
+     superavano i limiti di dimensione degli header HTTP.
+     Le modifiche sono accorpate: si scrive mezzo secondo dopo l'ultima
+     battuta, non a ogni tasto. */
+  const INV = {};
+  let INV_OK = true;
 
-  const ckRead = () => document.cookie.split('; ').reduce((m, c) => {
-    const i = c.indexOf('='); if (i > 0) m[c.slice(0, i)] = c.slice(i + 1); return m;
-  }, {});
-  const ckSet = (name, val) => {
-    document.cookie = `${name}=${val}; path=/; max-age=${60 * 60 * 24 * 3650}; samesite=lax; secure`;
-  };
-  const ckDel = name => { document.cookie = `${name}=; path=/; max-age=0; samesite=lax; secure`; };
+  const rec = n => INV[n] || {};
+  const owned = n => !!rec(n).posseduta;
+  const vuota = r => !r.posseduta && !r.album && !r.pagina && !r.note;
 
-  function collLoad() {
-    try {
-      const ck = ckRead();
-      let raw = '';
-      for (let i = 0; i < CK_N; i++) {
-        const part = ck[CK + i];
-        if (part == null) break;
-        raw += part;
-      }
-      COLL = raw ? (JSON.parse(decodeURIComponent(raw)) || {}) : {};
-    } catch (e) { COLL = {}; }
+  async function invCarica() {
+    const righe = await DB.tutte('inventario', 'select=serie_num,posseduta,album,pagina,note&order=serie_num');
+    righe.forEach(r => INV[r.serie_num] = {
+      posseduta: !!r.posseduta, album: r.album || '', pagina: r.pagina || '', note: r.note || ''
+    });
   }
-  function collSave() {
+
+  const inSospeso = {};
+  function collSet(n, patch) {
+    INV[n] = { ...rec(n), ...patch };
+    collStat();
+    clearTimeout(inSospeso[n]);
+    inSospeso[n] = setTimeout(() => invSalva(n), 500);
+  }
+
+  async function invSalva(n) {
+    const r = rec(n);
     try {
-      const raw = encodeURIComponent(JSON.stringify(COLL));
-      const parts = [];
-      for (let i = 0; i < raw.length; i += CK_MAX) parts.push(raw.slice(i, i + CK_MAX));
-      if (parts.length > CK_N) throw new Error('archivio troppo grande');
-      parts.forEach((p, i) => ckSet(CK + i, p));
-      const ck = ckRead();
-      for (let i = parts.length; i < CK_N; i++) { if (ck[CK + i] != null) ckDel(CK + i); else break; }
-      COLL_OK = parts.length === 0 || ckRead()[CK + '0'] != null;
-    } catch (e) { COLL_OK = false; }
+      if (vuota(r)) {
+        await DB.elimina('inventario', `serie_num=eq.${+n}`);
+        delete INV[n];
+      } else {
+        await DB.scrivi('inventario', {
+          serie_num: +n, posseduta: !!r.posseduta,
+          album: r.album || null, pagina: r.pagina || null, note: r.note || null
+        }, 'on_conflict=serie_num');
+      }
+      INV_OK = true;
+    } catch (e) {
+      INV_OK = false;
+      console.error('salvataggio inventario', e);
+    }
     collWarn();
   }
-  const rec = n => COLL[n] || {};
-  const owned = n => !!rec(n).own;
-  function collSet(n, patch) {
-    const r = { ...rec(n), ...patch };
-    if (!r.own && !r.album && !r.pag && !r.note) delete COLL[n]; else COLL[n] = r;
-    collSave(); collStat();
-  }
+
   function collWarn() {
     const el = $('#collWarn');
-    el.hidden = COLL_OK;
-    if (!COLL_OK) el.innerHTML = 'Questo browser non sta conservando i dati della collezione: le spunte e i riferimenti di album restano validi solo fino alla chiusura della pagina. Apri il catalogo direttamente su <b>liebig.pplx.app</b>, anziché dentro un\'anteprima, oppure usa <b>Esporta la collezione</b> per conservare un file di backup.';
+    el.hidden = INV_OK;
+    if (!INV_OK) el.innerHTML = 'Le ultime modifiche alla collezione <b>non sono state salvate</b>: il database non ha risposto. Controlla la connessione; la pagina riproverà al prossimo cambiamento.';
   }
+
   function collStat() {
-    const nums = Object.keys(COLL).filter(n => COLL[n].own);
+    const nums = Object.keys(INV).filter(n => INV[n].posseduta);
     const cat = nums.map(n => SERIE.find(s => s.num === +n)).filter(Boolean);
     const val = cat.reduce((a, s) => a + (s.p_med || 0), 0);
-    const loc = nums.filter(n => COLL[n].album || COLL[n].pag).length;
+    const loc = nums.filter(n => INV[n].album || INV[n].pagina).length;
     $('#collStat').innerHTML = nums.length
       ? `<b>${nums.length.toLocaleString('it-IT')}</b> serie nella tua collezione su ${META.n_serie ? META.n_serie.toLocaleString('it-IT') : '—'} ` +
         `(${(nums.length / (META.n_serie || 1) * 100).toFixed(1).replace('.', ',')}%) · valore di mercato complessivo <b>${eur0(val)}</b> · ` +
         `<b>${loc}</b> con collocazione indicata`
-      : 'Nessuna serie ancora contrassegnata come tua. Spunta la casella nella colonna <b>Mia</b> per iniziare a costruire l\'inventario.';
+      : "Nessuna serie ancora contrassegnata come tua. Spunta la casella nella colonna <b>Mia</b> per iniziare a costruire l'inventario.";
   }
 
   function collExport() {
-    const payload = { formato: 'collezione-liebig/1', esportato: new Date().toISOString(), voci: COLL };
+    const payload = { formato: 'collezione-liebig/2', esportato: new Date().toISOString(), voci: INV };
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 1)], { type: 'application/json' }));
     a.download = `collezione-liebig-${new Date().toISOString().slice(0, 10)}.json`;
     a.click(); URL.revokeObjectURL(a.href);
   }
+
   function collImport(file) {
     const fr = new FileReader();
-    fr.onload = () => {
+    fr.onload = async () => {
       try {
         const d = JSON.parse(fr.result);
         const voci = d && d.voci ? d.voci : d;
         if (!voci || typeof voci !== 'object') throw 0;
-        let n = 0;
+        const righe = [];
         for (const [k, v] of Object.entries(voci)) {
           if (!/^\d{1,4}$/.test(k) || !v || typeof v !== 'object') continue;
-          COLL[k] = {
-            own: !!v.own,
+          // il formato 1 (cookie) usava own/pag, il formato 2 posseduta/pagina
+          const r = {
+            posseduta: !!(v.posseduta ?? v.own),
             album: String(v.album ?? '').slice(0, 60),
-            pag: String(v.pag ?? '').slice(0, 30),
+            pagina: String(v.pagina ?? v.pag ?? '').slice(0, 30),
             note: String(v.note ?? '').slice(0, 300)
           };
-          if (!COLL[k].own && !COLL[k].album && !COLL[k].pag && !COLL[k].note) delete COLL[k]; else n++;
+          if (vuota(r)) continue;
+          INV[k] = r;
+          righe.push({ serie_num: +k, posseduta: r.posseduta, album: r.album || null, pagina: r.pagina || null, note: r.note || null });
         }
-        collSave(); collStat(); renderTable();
-        alert(`Importate ${n} voci della collezione.`);
-      } catch (e) { alert('File non riconosciuto: serve un file esportato da questo catalogo.'); }
+        if (righe.length) await DB.scrivi('inventario', righe, 'on_conflict=serie_num');
+        INV_OK = true; collWarn(); collStat(); renderTable();
+        alert(`Importate ${righe.length} voci della collezione.`);
+      } catch (e) {
+        console.error(e);
+        alert('Importazione non riuscita: serve un file esportato da questo catalogo, e il database deve essere raggiungibile.');
+      }
     };
     fr.readAsText(file);
   }
 
-  /* ------------------------------------------------------------------ init */
-  fetch('data/catalogo.json').then(r => r.json()).then(d => {
-    SERIE = d.serie; META = d.meta;
-    collLoad(); collWarn();
+  /* ------------------------------------------------------------------ init
+     Il catalogo arriva da Supabase: v_catalogo (una riga per serie, senza
+     inserzioni) e v_meta (intestazione del rilevamento corrente). Le
+     inserzioni si leggono solo aprendo la scheda di una serie. */
+  const NUMERICI = ['p_med', 'p_min', 'p_max', 'p_stima', 'scost', 'rarita_score', 'percentile'];
+
+  function errore(msg) {
+    $('#tbody').innerHTML = `<tr><td colspan="10" class="empty" style="padding:var(--space-8) var(--space-6)">${esc(msg)}</td></tr>`;
+  }
+
+  (async () => {
+    if (!DB.configurata()) {
+      return errore("Il catalogo non e' configurato: manca la chiave Supabase in js/config.js.");
+    }
+    try {
+      const [meta, serie] = await Promise.all([
+        DB.chiedi('v_meta', 'select=data,aggiornato,meta'),
+        DB.tutte('v_catalogo', 'select=*&order=num')
+      ]);
+      if (!meta.length || !serie.length) return errore("Il catalogo e vuoto: nessun rilevamento pubblicato.");
+      META = { ...meta[0].meta, data: meta[0].data, aggiornato: meta[0].meta.aggiornato || meta[0].aggiornato };
+      // PostgREST puo' restituire i numerici come stringhe: si normalizza una volta sola
+      SERIE = serie.map(s => {
+        NUMERICI.forEach(k => { if (s[k] != null) s[k] = Number(s[k]); });
+        return s;
+      });
+    } catch (e) {
+      console.error(e);
+      return errore('Impossibile caricare i dati del catalogo dal database.');
+    }
+    try { await invCarica(); } catch (e) { INV_OK = false; console.error('lettura inventario', e); }
+    collWarn();
     renderKpis(); bind(); collStat(); apply(); renderMonitor();
-  }).catch(e => {
-    $('#tbody').innerHTML = `<tr><td colspan="10" class="empty">Impossibile caricare i dati del catalogo.</td></tr>`;
-    console.error(e);
-  });
+  })();
 
   function renderKpis() {
     const dt = new Date(META.aggiornato);
@@ -233,11 +267,11 @@
       const mk = s.fonte_prezzo === 'mercato';
       const sc = s.scost;
       const r = rec(s.num);
-      const coll = r.album || r.pag
-        ? `<span class="loc">${r.album ? esc(r.album) : 'album non indicato'}${r.pag ? ' · p. ' + esc(r.pag) : ''}</span>`
+      const coll = r.album || r.pagina
+        ? `<span class="loc">${r.album ? esc(r.album) : 'album non indicato'}${r.pagina ? ' · p. ' + esc(r.pagina) : ''}</span>`
         : '';
-      return `<tr data-n="${s.num}"${r.own ? ' class="mine"' : ''}>
-        <td class="chk"><input type="checkbox" class="own" data-n="${s.num}"${r.own ? ' checked' : ''}
+      return `<tr data-n="${s.num}"${r.posseduta ? ' class="mine"' : ''}>
+        <td class="chk"><input type="checkbox" class="own" data-n="${s.num}"${r.posseduta ? ' checked' : ''}
             aria-label="Serie ${s.num} in mio possesso" title="Serie in mio possesso"></td>
         <td class="num"><span class="n">${s.num}</span></td>
         <td><span class="ttl">${esc(s.titolo)}</span>
@@ -262,13 +296,15 @@
     }));
     $$('#tbody input.own').forEach(cb => cb.addEventListener('change', e => {
       const n = +e.target.dataset.n;
-      collSet(n, { own: e.target.checked });
+      collSet(n, { posseduta: e.target.checked });
       e.target.closest('tr').classList.toggle('mine', e.target.checked);
       if (state.owns.size === 1) apply();
     }));
   }
 
   /* ------------------------------------------------------------------ dettaglio */
+  const cercaEbay = q => 'https://www.ebay.it/sch/i.html?_nkw=' + encodeURIComponent(q);
+
   const NAZ = { IT: 'Italiana', BL: 'Belga', BLT: 'Belga-tedesca', TD: 'Tedesca', FR: 'Francese', OL: 'Olandese', FM: 'Fiamminga', SP: 'Spagnola', IN: 'Inglese', SV: 'Svizzera', SVE: 'Svedese', DN: 'Danese', BO: 'Boema', UN: 'Ungherese', RS: 'Russa' };
 
   function openDrawer(num) {
@@ -301,46 +337,43 @@
       <h3 class="d-h">Edizioni linguistiche esistenti</h3>
       <p class="d-meta">${s.edizioni.map(e => NAZ[e] || e).join(' · ')}</p>
 
-      <h3 class="d-h">Inserzioni attive abbinate${s.offerte_tot > s.offerte ? ` (${s.offerte_tot} totali con altre edizioni)` : ''}</h3>
-      ${s.listings.length ? `<ul class="lst">${s.listings.map(l => `
-        <li><a href="${url(l.url)}" target="_blank" rel="noopener">${esc(l.t)}</a>
-            <span class="pz">${eur(l.prezzo)}${l.asta ? ' <span class="tag tag-au">asta</span>' : ''}</span></li>`).join('')}</ul>`
-      : `<p class="empty">Nessuna inserzione attiva di serie completa rilevata per questa serie al momento del rilevamento.</p>`}
+      <h3 class="d-h">Andamento della quotazione</h3>
+      <div class="d-storico" id="dStorico"><p class="d-attesa">lettura dello storico...</p></div>
 
-      ${s.sciolte && s.sciolte.length ? `<h3 class="d-h">Figurine sciolte in vendita <span class="hint">escluse dal calcolo della quotazione</span></h3>
-        <ul class="lst">${s.sciolte.map(l => `<li><a href="${url(l.url)}" target="_blank" rel="noopener">${esc(l.t)}</a><span class="pz">${eur(l.prezzo)}</span></li>`).join('')}</ul>` : ''}
+      <h3 class="d-h">Inserzioni attive abbinate${s.offerte_tot > s.offerte ? ` (${s.offerte_tot} totali con altre edizioni)` : ''}</h3>
+      <div id="dIns"><p class="d-attesa">lettura delle inserzioni...</p></div>
 
       <h3 class="d-h">La mia collezione</h3>
       <div class="d-coll">
-        <label class="d-own"><input type="checkbox" id="dOwn"${rec(s.num).own ? ' checked' : ''}>
+        <label class="d-own"><input type="checkbox" id="dOwn"${rec(s.num).posseduta ? ' checked' : ''}>
           <span>Possiedo questa serie</span></label>
         <div class="d-fields">
           <label>Album
             <input type="text" id="dAlbum" maxlength="60" placeholder="es. Album 3 — serie tedesche" value="${esc(rec(s.num).album || '')}">
           </label>
           <label>Pagina
-            <input type="text" id="dPag" maxlength="30" placeholder="es. 12 oppure 12–13" value="${esc(rec(s.num).pag || '')}">
+            <input type="text" id="dPag" maxlength="30" placeholder="es. 12 oppure 12–13" value="${esc(rec(s.num).pagina || '')}">
           </label>
         </div>
         <label class="d-note">Note
           <textarea id="dNote" maxlength="300" rows="2" placeholder="stato di conservazione, provenienza, doppioni…">${esc(rec(s.num).note || '')}</textarea>
         </label>
-        <p class="d-saved" id="dSaved">I dati della collezione restano nel tuo browser.</p>
+        <p class="d-saved" id="dSaved">Le modifiche sono salvate nel catalogo.</p>
       </div>
 
       <div class="d-links">
-        <a href="${url(s.ebay_q)}" target="_blank" rel="noopener">Cerca «sang ${s.num}» su eBay ↗</a>
-        <a href="${url(s.ebay_q2)}" target="_blank" rel="noopener">Cerca per titolo ↗</a>
+        <a href="${cercaEbay('liebig sang ' + s.num)}" target="_blank" rel="noopener">Cerca «sang ${s.num}» su eBay ↗</a>
+        <a href="${cercaEbay('liebig ' + s.titolo.slice(0, 40))}" target="_blank" rel="noopener">Cerca per titolo ↗</a>
       </div>`;
 
     const flash = () => {
       const el = $('#dSaved');
       el.textContent = 'Salvato.'; el.classList.add('ok');
       clearTimeout(flash.t);
-      flash.t = setTimeout(() => { el.textContent = 'I dati della collezione restano nel tuo browser.'; el.classList.remove('ok'); }, 1600);
+      flash.t = setTimeout(() => { el.textContent = 'Le modifiche sono salvate nel catalogo.'; el.classList.remove('ok'); }, 1600);
     };
     $('#dOwn').addEventListener('change', e => {
-      collSet(s.num, { own: e.target.checked }); flash();
+      collSet(s.num, { posseduta: e.target.checked }); flash();
       const cb = document.querySelector(`#tbody input.own[data-n="${s.num}"]`);
       if (cb) { cb.checked = e.target.checked; cb.closest('tr').classList.toggle('mine', e.target.checked); }
       if (state.owns.size === 1) apply();
@@ -348,9 +381,75 @@
     const fld = (id, key) => $(id).addEventListener('input', e => {
       collSet(s.num, { [key]: e.target.value }); flash(); renderRowLoc(s.num);
     });
-    fld('#dAlbum', 'album'); fld('#dPag', 'pag'); fld('#dNote', 'note');
+    fld('#dAlbum', 'album'); fld('#dPag', 'pagina'); fld('#dNote', 'note');
 
     $('#drawer').hidden = false;
+    // le due letture sono asincrone: se nel frattempo si apre un'altra serie,
+    // il risultato in ritardo viene scartato
+    const token = ++openDrawer.token;
+    caricaInserzioni(s, token);
+    caricaStorico(s, token);
+  }
+  openDrawer.token = 0;
+
+  async function caricaInserzioni(s, token) {
+    let righe;
+    try {
+      righe = await DB.tutte('v_inserzioni',
+        `select=titolo,prezzo,url,asta,singola&serie_num=eq.${s.num}&order=prezzo`);
+    } catch (e) {
+      console.error(e);
+      if (token === openDrawer.token) $('#dIns').innerHTML = '<p class="empty">Lettura delle inserzioni non riuscita.</p>';
+      return;
+    }
+    if (token !== openDrawer.token) return;
+    const complete = righe.filter(l => !l.singola).slice(0, 8);
+    const sciolte = righe.filter(l => l.singola).slice(0, 4);
+    const voce = l => `<li><a href="${url(l.url)}" target="_blank" rel="noopener">${esc(l.titolo)}</a>` +
+      `<span class="pz">${eur(Number(l.prezzo))}${l.asta ? ' <span class="tag tag-au">asta</span>' : ''}</span></li>`;
+    $('#dIns').innerHTML = (complete.length
+        ? `<ul class="lst">${complete.map(voce).join('')}</ul>`
+        : '<p class="empty">Nessuna inserzione attiva di serie completa rilevata per questa serie al momento del rilevamento.</p>')
+      + (sciolte.length
+        ? `<h3 class="d-h">Figurine sciolte in vendita <span class="hint">escluse dal calcolo della quotazione</span></h3>
+           <ul class="lst">${sciolte.map(voce).join('')}</ul>`
+        : '');
+  }
+
+  /* Lo storico e' il motivo principale per cui il catalogo sta su un database:
+     ogni rilevamento lascia una riga in quotazioni, e qui se ne legge la serie. */
+  async function caricaStorico(s, token) {
+    let righe;
+    try {
+      righe = await DB.tutte('v_storico',
+        `select=data,p_med,offerte,fonte_prezzo&serie_num=eq.${s.num}&order=data`);
+    } catch (e) {
+      console.error(e);
+      if (token === openDrawer.token) $('#dStorico').innerHTML = '';
+      return;
+    }
+    if (token !== openDrawer.token) return;
+    if (righe.length < 2) {
+      $('#dStorico').innerHTML = '<p class="d-attesa">Un solo rilevamento in archivio: la serie storica comincia con il prossimo aggiornamento.</p>';
+      return;
+    }
+    $('#dStorico').innerHTML = '<canvas id="dChart" height="150"></canvas>';
+    new Chart($('#dChart'), {
+      type: 'line',
+      data: {
+        labels: righe.map(r => new Date(r.data).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })),
+        datasets: [{
+          data: righe.map(r => Number(r.p_med)),
+          borderColor: '#8c1c22', backgroundColor: 'rgba(140,28,34,.08)',
+          borderWidth: 2, pointRadius: 2, tension: .25, fill: true
+        }]
+      },
+      options: {
+        maintainAspectRatio: false, plugins: { legend: { display: false },
+          tooltip: { callbacks: { label: c => eur(c.parsed.y) + ' · ' + righe[c.dataIndex].offerte + ' offerte' } } },
+        scales: { y: { grid: { color: '#ebe2d1' }, ticks: { callback: v => '€' + v } }, x: { grid: { display: false } } }
+      }
+    });
   }
 
   /* aggiorna la riga in tabella con la collocazione, senza ridisegnare tutto */
@@ -359,9 +458,9 @@
     if (!tr) return;
     const r = rec(num), cell = tr.children[2];
     let el = cell.querySelector('.loc');
-    if (!r.album && !r.pag) { if (el) el.remove(); return; }
+    if (!r.album && !r.pagina) { if (el) el.remove(); return; }
     if (!el) { el = document.createElement('span'); el.className = 'loc'; cell.appendChild(el); }
-    el.innerHTML = `${r.album ? esc(r.album) : 'album non indicato'}${r.pag ? ' · p. ' + esc(r.pag) : ''}`;
+    el.innerHTML = `${r.album ? esc(r.album) : 'album non indicato'}${r.pagina ? ' · p. ' + esc(r.pagina) : ''}`;
   }
 
   /* ------------------------------------------------------------------ monitoraggio */
@@ -375,22 +474,35 @@
     $('#rankUp').innerHTML = up.map(li).join('');
     $('#rankDown').innerHTML = down.map(li).join('');
 
-    const auct = [];
-    SERIE.forEach(s => s.listings.filter(l => l.asta).forEach(l => auct.push({ s, l })));
-    auct.sort((a, b) => b.l.prezzo - a.l.prezzo);
-    $('#auctLead').textContent = auct.length
-      ? `${auct.length} inserzioni in formato asta abbinate a una serie del catalogo al momento del rilevamento. Il confronto con la mediana della serie indica se il prezzo corrente è sopra o sotto il livello dell'offerta.`
-      : 'Nessuna asta in corso abbinata a una serie del catalogo al momento del rilevamento.';
-    $('#auctBody').innerHTML = auct.length ? auct.slice(0, 40).map(({ s, l }) => `
-      <tr data-n="${s.num}">
-        <td class="num"><span class="n">${s.num}</span></td>
-        <td class="ttl">${esc(l.t)}</td>
-        <td class="num price">${eur(l.prezzo)}</td>
-        <td class="num">${eur(s.p_med)}</td>
-        <td class="num"><a href="${url(l.url)}" target="_blank" rel="noopener">apri ↗</a></td>
-      </tr>`).join('') : `<tr><td colspan="5" class="empty" style="padding:var(--space-6)">Nessuna asta rilevata.</td></tr>`;
-
+    renderAste();
     charts();
+  }
+
+  async function renderAste() {
+    let aste;
+    try {
+      aste = await DB.chiedi('v_aste',
+        'select=serie_num,titolo,prezzo,url,mediana_serie&order=prezzo.desc&limit=40');
+    } catch (e) {
+      console.error(e);
+      $('#auctLead').textContent = 'Lettura delle aste non riuscita.';
+      return;
+    }
+    // il totale viene dal catalogo gia' caricato: la query e' limitata a 40 righe
+    const totale = SERIE.reduce((a, s) => a + (s.aste || 0), 0);
+    $('#auctLead').textContent = aste.length
+      ? `${totale} inserzioni in formato asta abbinate a una serie del catalogo al momento del rilevamento` +
+        (totale > aste.length ? `; qui sotto le ${aste.length} di prezzo più alto` : '') +
+        `. Il confronto con la mediana della serie indica se il prezzo corrente è sopra o sotto il livello dell'offerta.`
+      : 'Nessuna asta in corso abbinata a una serie del catalogo al momento del rilevamento.';
+    $('#auctBody').innerHTML = aste.length ? aste.map(a => `
+      <tr data-n="${a.serie_num}">
+        <td class="num"><span class="n">${a.serie_num}</span></td>
+        <td class="ttl">${esc(a.titolo)}</td>
+        <td class="num price">${eur(Number(a.prezzo))}</td>
+        <td class="num">${eur(Number(a.mediana_serie))}</td>
+        <td class="num"><a href="${url(a.url)}" target="_blank" rel="noopener">apri ↗</a></td>
+      </tr>`).join('') : `<tr><td colspan="5" class="empty" style="padding:var(--space-6)">Nessuna asta rilevata.</td></tr>`;
   }
 
   function charts() {

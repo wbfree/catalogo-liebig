@@ -52,25 +52,57 @@ quindi non vengono raccolte. Il catalogo riporta perciò **prezzi richiesti** su
 attive, non prezzi di aggiudicazione. Il file `ebay_sold.json` usato nelle prime prove è
 rimasto vuoto e non è incluso nel repository.
 
-## Prodotto della pipeline
+## Prodotto della pipeline: il database Supabase
 
-### `site/data/catalogo.json`
-- **Struttura**: `{"meta": {...}, "serie": [...]}`.
-- **`meta`** del rilevamento pubblicato: 1.871 serie totali, 1.305 con edizione italiana,
-  anni 1872-1975, 9.609 inserzioni lette, 7.066 abbinate a una serie, 1.576 serie con
-  mercato attivo, mediana globale 8,98 €.
-- **Ogni voce di `serie`** contiene numerazioni di conversione, titolo, anno, numero di
-  figurine, edizioni linguistiche, quotazione (mediana osservata oppure stima per
-  comparabili), minimo e massimo, numero di inserzioni e di offerte, indice e percentile
-  di rarità, scostamento rispetto alla fascia attesa e l'elenco delle inserzioni abbinate
-  con titolo, prezzo e URL.
-- **Rigenerazione**: `python build_dataset.py`. Lo script è deterministico: a parità di
-  sorgenti produce un file identico byte per byte.
+La pipeline non scrive più un file: scrive un **rilevamento** nel database. Lo schema
+è in `supabase/migrations/`, si applica con `python supabase/applica.py`.
+
+### `serie` — anagrafica
+Una riga per serie (1.871). Numerazioni di conversione, titolo, anno, numero di figurine,
+edizioni linguistiche, segnalazione di rarità della fonte. Cambia solo se viene rivista
+`afil_rows.json`.
+
+### `rilevamenti` — testata di ogni esecuzione
+Una riga per esecuzione della pipeline: data, ora, i totali del run in `meta` (le stesse
+cifre che prima stavano nel campo `meta` del JSON) e il flag `corrente`, che indica quale
+rilevamento il sito deve mostrare. Un vincolo di unicità parziale garantisce che ce ne sia
+al massimo uno corrente.
+
+### `quotazioni` — i prezzi, per serie e per rilevamento
+Una riga per serie per rilevamento: mediana, minimo, massimo, stima da comparabili,
+scostamento, fasce, numero di offerte e di aste, punteggio e classe di rarità.
+**Non viene mai potata**: è l'archivio storico delle quotazioni, quello che prima si
+perdeva ogni giorno con la cartella `storico/`. Da qui nasce il grafico di andamento nella
+scheda di ogni serie.
+
+### `inserzioni` — gli annunci abbinati
+Gli annunci eBay abbinati a una serie, con titolo, prezzo, URL, formato asta, se è una
+figurina sciolta e come è avvenuto l'abbinamento (numero o titolo). Al contrario delle
+quotazioni queste righe **vengono potate**: si conservano quelle degli ultimi
+`RILEVAMENTI_CON_INSERZIONI` rilevamenti (7 per impostazione predefinita), perché sono
+circa 6.700 per rilevamento e invecchiano subito.
+
+### `inventario` — la collezione personale
+Una riga per serie posseduta o annotata: possesso, album, pagina, note. Non ha un campo
+proprietario, perché il catalogo è a utente singolo.
+
+### Viste di lettura
+Il sito non interroga le tabelle direttamente ma cinque viste: `v_catalogo` (il
+rilevamento corrente, una riga per serie, senza inserzioni), `v_inserzioni` e `v_aste`
+(annunci del rilevamento corrente), `v_storico` (la serie temporale delle quotazioni) e
+`v_meta` (la testata del rilevamento corrente).
+
+### Accesso
+Il sito usa la chiave pubblica `anon` e le politiche RLS: lettura su tutto il catalogo,
+lettura e scrittura sull'inventario, nessuna scrittura sulle tabelle di catalogo. La
+pipeline usa invece la connessione diretta con il ruolo `postgres`, che ignora le policy.
+La migrazione `003_permessi.sql` revoca i privilegi che Supabase concede in automatico ad
+`anon` su ogni nuova tabella di `public` — fra cui `TRUNCATE`, che non è soggetto a RLS e
+avrebbe permesso a chiunque di svuotare il catalogo.
 
 ### `site/version.txt`
-Marcatore scritto ad ogni pubblicazione automatica; serve a verificare dall'esterno
-(`curl https://liebig.pplx.app/version.txt`) che il sito pubblico sia stato effettivamente
-aggiornato dalla procedura pianificata.
+Marcatore scritto quando si ripubblica il sito. Da quando i dati stanno nel database il
+sito va ripubblicato solo se cambia il codice, non ogni mattina.
 
 ## Stato dell'automazione
 
@@ -81,11 +113,13 @@ metodo di raccolta. È un'istantanea di riferimento, non un file letto dalla pip
 
 ## Dati non versionati
 
-- `storico/` — copie datate di `catalogo.json` e dei rilevamenti eBay, usate ogni mattina
-  per calcolare le variazioni di quotazione rispetto al giorno precedente. Escluse dal
-  repository perché crescono di alcuni megabyte al giorno.
-- **Inventario personale** — le spunte di possesso e i riferimenti di album e pagina
-  restano nel browser di chi consulta il sito, in cookie di lunga durata del solo dominio
-  del catalogo. Non transitano da nessun server e non sono quindi presenti né nel dataset
-  né nel repository. Il pulsante «Esporta la collezione» produce un file JSON
-  `collezione-liebig-<data>.json` che resta in mano all'utente.
+- `.env` — credenziali Supabase: stringa di connessione con il ruolo `postgres`,
+  indirizzo del progetto e chiave `anon`. Escluso dal repository; `.env.example` ne mostra
+  la forma. La chiave `anon` è comunque pubblica e compare in `site/js/config.js`: non
+  protegge i dati, che sono difesi dalle policy RLS.
+- `storico/` — copie datate dei rilevamenti eBay. Non serve più per le quotazioni, che
+  ora hanno un archivio proprio nella tabella `quotazioni`.
+- **Inventario personale** — non è più nel browser né nel repository: sta nella tabella
+  `inventario` del database. Il pulsante «Esporta la collezione» continua a produrre un
+  file JSON `collezione-liebig-<data>.json` come backup, e l'importazione accetta sia il
+  formato nuovo sia quello delle vecchie esportazioni da cookie.
