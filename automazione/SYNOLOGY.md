@@ -136,6 +136,30 @@ job sparirebbe senza preavviso.
 La raccolta dura 25-30 minuti, quindi partendo alle 07:30 il rilevamento e' pubblicato
 verso le 08:00. Non serve che il sito venga ripubblicato: legge i dati dal database.
 
+### La costruzione dell'immagine fallisce sui font
+
+```
+E: Package 'ttf-unifont' has no installation candidate
+E: Package 'ttf-ubuntu-font-family' has no installation candidate
+Failed to install browsers
+```
+
+`playwright install --with-deps` sta cercando pacchetti **Ubuntu** su una base **Debian**.
+Succede quando la versione di Debian dell'immagine di base e' piu' recente di quelle che
+quella versione di Playwright conosce: ripiega sull'elenco Ubuntu, dove i font si chiamano
+`ttf-*` invece di `fonts-*`.
+
+Per questo il `Dockerfile` appunta `python:3.12-slim-bookworm` e non `python:3.12-slim`:
+il secondo oggi e' Debian 13 (trixie), che Playwright 1.47 non riconosce. Se alzi la
+versione di Playwright, guarda prima quali distribuzioni conosce, in
+`playwright/driver/package/lib/server/registry/nativeDeps.js`.
+
+Dopo aver corretto il `Dockerfile` la costruzione va rifatta da zero:
+
+```bash
+cd /volume1/docker/catalogo-liebig/automazione && /usr/local/bin/docker compose build --no-cache
+```
+
 ## 5. Quando qualcosa va storto
 
 La catena e' costruita perche' un guasto non produca mai un catalogo sbagliato:
