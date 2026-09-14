@@ -73,22 +73,37 @@ verificare che la protezione funzioni.
 
 - **Utente**: `root` (serve per parlare con Docker)
 - **Pianificazione**: ogni giorno alle 07:30
-- **Comando**:
+- **Comando**: una riga sola
 
 ```bash
-cd /volume1/docker/catalogo-liebig/automazione && /usr/local/bin/docker compose run --rm aggiornamento
+/volume1/docker/catalogo-liebig/automazione/nas_job.sh
 ```
 
-Usa il percorso assoluto di `docker`: gli script del Task Scheduler partono con
-un `PATH` ridotto e `docker` da solo spesso non viene trovato.
+`nas_job.sh` si occupa del resto: trova il comando compose giusto (`docker compose`
+su Container Manager, `docker-compose` sul vecchio pacchetto), entra nella cartella
+giusta, scrive un log datato in `log/` tenendo gli ultimi 60 giorni, e soprattutto
+**propaga il codice di uscita** dell'aggiornamento.
 
-Non modificare `/etc/crontab` a mano: DSM lo riscrive agli aggiornamenti di
-sistema e il job sparirebbe senza preavviso.
+Quest'ultimo punto non e' un dettaglio: in una pipeline `comando | tee`, `$?` e' l'esito
+di `tee`, non del comando. Senza l'accorgimento che c'e' nello script, ogni esecuzione
+risulterebbe riuscita anche quando fallisce, e la notifica per posta non arriverebbe mai.
+
+Rendilo eseguibile la prima volta:
+
+```bash
+chmod +x /volume1/docker/catalogo-liebig/automazione/nas_job.sh
+```
 
 Nella scheda **Task Settings** spunta **Send run details by email** e
-**Send run details only when the script terminates abnormally**: cosi' ricevi
-un messaggio solo quando qualcosa e' andato storto, che e' esattamente quello
-che serve per un job non presidiato.
+**Send run details only when the script terminates abnormally**: cosi' ricevi un
+messaggio solo quando qualcosa e' andato storto, che e' quello che serve per un job non
+presidiato.
+
+Non modificare `/etc/crontab` a mano: DSM lo riscrive agli aggiornamenti di sistema e il
+job sparirebbe senza preavviso.
+
+La raccolta dura 25-30 minuti, quindi partendo alle 07:30 il rilevamento e' pubblicato
+verso le 08:00. Non serve che il sito venga ripubblicato: legge i dati dal database.
 
 ## 5. Quando qualcosa va storto
 

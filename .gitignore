@@ -5,3 +5,4 @@ storico/
 .env
 .env.*
 !.env.example
+log/

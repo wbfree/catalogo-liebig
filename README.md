@@ -35,7 +35,8 @@ supabase/
 build_dataset.py           pipeline: sorgenti -> database Supabase
 automazione/
   raccolta_ebay.py         raccolta delle inserzioni con Playwright
-  aggiorna.sh              i due passi in sequenza, per l'esecuzione pianificata
+  aggiorna.sh              i due passi in sequenza, dentro il contenitore
+  nas_job.sh               involucro per il Task Scheduler: log ed esito
   Dockerfile               immagine con Python, psycopg e Chromium
   docker-compose.yml       esecuzione sul NAS
   SYNOLOGY.md              installazione e pianificazione su Synology
