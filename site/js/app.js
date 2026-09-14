@@ -8,15 +8,89 @@
   const url = u => { const v = String(u ?? ''); return /^https?:\/\//i.test(v) ? esc(v) : '#'; };
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-  const state = { bands: new Set(), rars: new Set(), srcs: new Set(), eds: new Set(), onlyAuct: false, q: '', y1: 1872, y2: 1975, pmin: null, pmax: null, sort: 'num', limit: 200 };
+  const state = { bands: new Set(), rars: new Set(), srcs: new Set(), eds: new Set(), owns: new Set(), onlyAuct: false, q: '', y1: 1872, y2: 1975, pmin: null, pmax: null, sort: 'num', limit: 200 };
   let SERIE = [], META = {}, VIEW = [];
+
+  /* ------------------------------------------------------------------ la mia collezione
+     Archivio locale: { "<numero serie>": { own: true, album: "", pag: "", note: "" } }
+     Salvato nel browser (localStorage). Se il browser lo blocca, resta in memoria
+     per la sessione corrente e lo segnaliamo con un avviso. */
+  const KEY = 'liebig.collezione.v1';
+  let COLL = {}, COLL_OK = true;
+
+  function collLoad() {
+    try {
+      COLL = JSON.parse(localStorage.getItem(KEY) || '{}') || {};
+    } catch (e) { COLL = {}; COLL_OK = false; }
+  }
+  function collSave() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(COLL));
+    } catch (e) { COLL_OK = false; collWarn(); }
+  }
+  const rec = n => COLL[n] || {};
+  const owned = n => !!rec(n).own;
+  function collSet(n, patch) {
+    const r = { ...rec(n), ...patch };
+    if (!r.own && !r.album && !r.pag && !r.note) delete COLL[n]; else COLL[n] = r;
+    collSave(); collStat();
+  }
+  function collWarn() {
+    const el = $('#collWarn');
+    el.hidden = COLL_OK;
+    if (!COLL_OK) el.innerHTML = 'Questo browser non permette di salvare i dati della collezione in locale: le spunte e i riferimenti di album restano validi solo fino alla chiusura della pagina. Apri il sito su <b>liebig.pplx.app</b> oppure usa <b>Esporta la collezione</b> per conservare un file di backup.';
+  }
+  function collStat() {
+    const nums = Object.keys(COLL).filter(n => COLL[n].own);
+    const cat = nums.map(n => SERIE.find(s => s.num === +n)).filter(Boolean);
+    const val = cat.reduce((a, s) => a + (s.p_med || 0), 0);
+    const loc = nums.filter(n => COLL[n].album || COLL[n].pag).length;
+    $('#collStat').innerHTML = nums.length
+      ? `<b>${nums.length.toLocaleString('it-IT')}</b> serie nella tua collezione su ${META.n_serie ? META.n_serie.toLocaleString('it-IT') : '—'} ` +
+        `(${(nums.length / (META.n_serie || 1) * 100).toFixed(1).replace('.', ',')}%) · valore di mercato complessivo <b>${eur0(val)}</b> · ` +
+        `<b>${loc}</b> con collocazione indicata`
+      : 'Nessuna serie ancora contrassegnata come tua. Spunta la casella nella colonna <b>Mia</b> per iniziare a costruire l\'inventario.';
+  }
+
+  function collExport() {
+    const payload = { formato: 'collezione-liebig/1', esportato: new Date().toISOString(), voci: COLL };
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 1)], { type: 'application/json' }));
+    a.download = `collezione-liebig-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click(); URL.revokeObjectURL(a.href);
+  }
+  function collImport(file) {
+    const fr = new FileReader();
+    fr.onload = () => {
+      try {
+        const d = JSON.parse(fr.result);
+        const voci = d && d.voci ? d.voci : d;
+        if (!voci || typeof voci !== 'object') throw 0;
+        let n = 0;
+        for (const [k, v] of Object.entries(voci)) {
+          if (!/^\d{1,4}$/.test(k) || !v || typeof v !== 'object') continue;
+          COLL[k] = {
+            own: !!v.own,
+            album: String(v.album ?? '').slice(0, 60),
+            pag: String(v.pag ?? '').slice(0, 30),
+            note: String(v.note ?? '').slice(0, 300)
+          };
+          if (!COLL[k].own && !COLL[k].album && !COLL[k].pag && !COLL[k].note) delete COLL[k]; else n++;
+        }
+        collSave(); collStat(); renderTable();
+        alert(`Importate ${n} voci della collezione.`);
+      } catch (e) { alert('File non riconosciuto: serve un file esportato da questo catalogo.'); }
+    };
+    fr.readAsText(file);
+  }
 
   /* ------------------------------------------------------------------ init */
   fetch('data/catalogo.json').then(r => r.json()).then(d => {
     SERIE = d.serie; META = d.meta;
-    renderKpis(); bind(); apply(); renderMonitor();
+    collLoad(); collWarn();
+    renderKpis(); bind(); collStat(); apply(); renderMonitor();
   }).catch(e => {
-    $('#tbody').innerHTML = `<tr><td colspan="9" class="empty">Impossibile caricare i dati del catalogo.</td></tr>`;
+    $('#tbody').innerHTML = `<tr><td colspan="10" class="empty">Impossibile caricare i dati del catalogo.</td></tr>`;
     console.error(e);
   });
 
@@ -49,6 +123,11 @@
     $$('#rars .chip').forEach(b => b.addEventListener('click', () => toggle(b, state.rars, b.dataset.rar)));
     $$('#srcs .chip').forEach(b => b.addEventListener('click', () => toggle(b, state.srcs, b.dataset.src)));
     $$('#eds .chip').forEach(b => b.addEventListener('click', () => toggle(b, state.eds, b.dataset.ed)));
+    $$('#owns .chip').forEach(b => b.addEventListener('click', () => toggle(b, state.owns, b.dataset.own)));
+
+    $('#collExport').addEventListener('click', collExport);
+    $('#collImportBtn').addEventListener('click', () => $('#collImport').click());
+    $('#collImport').addEventListener('change', e => { if (e.target.files[0]) collImport(e.target.files[0]); e.target.value = ''; });
     $('#onlyAuct').addEventListener('click', e => { state.onlyAuct = !state.onlyAuct; e.target.classList.toggle('is-on', state.onlyAuct); apply(); });
     $('#reset').addEventListener('click', reset);
 
@@ -75,7 +154,7 @@
   }
 
   function reset() {
-    state.bands.clear(); state.rars.clear(); state.srcs.clear(); state.eds.clear();
+    state.bands.clear(); state.rars.clear(); state.srcs.clear(); state.eds.clear(); state.owns.clear();
     state.onlyAuct = false; state.q = ''; state.pmin = state.pmax = null;
     state.y1 = 1872; state.y2 = 1975; state.limit = 200; state.sort = 'num';
     $$('.chip').forEach(c => c.classList.remove('is-on'));
@@ -94,6 +173,7 @@
       if (state.bands.size && !state.bands.has(s.fascia)) return false;
       if (state.rars.size && !state.rars.has(s.rarita)) return false;
       if (state.srcs.size && !state.srcs.has(s.fonte_prezzo)) return false;
+      if (state.owns.size === 1) { if (state.owns.has('si') && !owned(s.num)) return false; if (state.owns.has('no') && owned(s.num)) return false; }
       if (state.onlyAuct && !s.aste) return false;
       if (state.pmin != null && (s.p_med ?? 0) < state.pmin) return false;
       if (state.pmax != null && (s.p_med ?? 0) > state.pmax) return false;
@@ -127,12 +207,18 @@
     $('#tbody').innerHTML = rows.length ? rows.map(s => {
       const mk = s.fonte_prezzo === 'mercato';
       const sc = s.scost;
-      return `<tr data-n="${s.num}">
+      const r = rec(s.num);
+      const coll = r.album || r.pag
+        ? `<span class="loc">${r.album ? esc(r.album) : 'album non indicato'}${r.pag ? ' · p. ' + esc(r.pag) : ''}</span>`
+        : '';
+      return `<tr data-n="${s.num}"${r.own ? ' class="mine"' : ''}>
+        <td class="chk"><input type="checkbox" class="own" data-n="${s.num}"${r.own ? ' checked' : ''}
+            aria-label="Serie ${s.num} in mio possesso" title="Serie in mio possesso"></td>
         <td class="num"><span class="n">${s.num}</span></td>
         <td><span class="ttl">${esc(s.titolo)}</span>
             <span class="sub">${mk ? `<span class="tag tag-mk">mercato</span>` : `<span class="tag tag-st">stima</span>`}
             ${s.aste ? `<span class="tag tag-au">asta</span>` : ''}
-            ${s.it ? '' : '<span class="tag tag-ed">no ed. IT</span> '}Unificato ${esc(s.uni || '—')} · De Magistris ${esc(s.dem || '—')}</span></td>
+            ${s.it ? '' : '<span class="tag tag-ed">no ed. IT</span> '}Unificato ${esc(s.uni || '—')} · De Magistris ${esc(s.dem || '—')}</span>${coll}</td>
         <td class="num">${s.anno ?? '<span class="nil">—</span>'}</td>
         <td class="num">${s.nfig ?? '—'}</td>
         <td class="num price">${eur(s.p_med)}</td>
@@ -141,11 +227,20 @@
         <td><span class="rar r-${s.rarita}"><i class="dot"></i>${s.rarita} <span class="pct">p${s.percentile}</span></span></td>
         <td class="num">${sc == null ? '<span class="nil">—</span>' : `<span class="${sc >= 0 ? 'up' : 'down'}">${sc > 0 ? '+' : ''}${sc.toFixed(0)}%</span>`}</td>
       </tr>`;
-    }).join('') : `<tr><td colspan="9" class="empty" style="padding:var(--space-8) var(--space-6)">Nessuna serie corrisponde ai filtri selezionati. Prova ad allargare la fascia di prezzo o l'intervallo di anni.</td></tr>`;
+    }).join('') : `<tr><td colspan="10" class="empty" style="padding:var(--space-8) var(--space-6)">Nessuna serie corrisponde ai filtri selezionati. Prova ad allargare la fascia di prezzo o l'intervallo di anni.</td></tr>`;
 
     $('#more').hidden = VIEW.length <= state.limit;
     $('#more').textContent = `Mostra altre ${Math.min(200, VIEW.length - state.limit)} serie (${VIEW.length - state.limit} rimanenti)`;
-    $$('#tbody tr[data-n]').forEach(tr => tr.addEventListener('click', () => openDrawer(+tr.dataset.n)));
+    $$('#tbody tr[data-n]').forEach(tr => tr.addEventListener('click', e => {
+      if (e.target.closest('.chk')) return;   // la casella non apre la scheda
+      openDrawer(+tr.dataset.n);
+    }));
+    $$('#tbody input.own').forEach(cb => cb.addEventListener('change', e => {
+      const n = +e.target.dataset.n;
+      collSet(n, { own: e.target.checked });
+      e.target.closest('tr').classList.toggle('mine', e.target.checked);
+      if (state.owns.size === 1) apply();
+    }));
   }
 
   /* ------------------------------------------------------------------ dettaglio */
@@ -190,11 +285,58 @@
       ${s.sciolte && s.sciolte.length ? `<h3 class="d-h">Figurine sciolte in vendita <span class="hint">escluse dal calcolo della quotazione</span></h3>
         <ul class="lst">${s.sciolte.map(l => `<li><a href="${url(l.url)}" target="_blank" rel="noopener">${esc(l.t)}</a><span class="pz">${eur(l.prezzo)}</span></li>`).join('')}</ul>` : ''}
 
+      <h3 class="d-h">La mia collezione</h3>
+      <div class="d-coll">
+        <label class="d-own"><input type="checkbox" id="dOwn"${rec(s.num).own ? ' checked' : ''}>
+          <span>Possiedo questa serie</span></label>
+        <div class="d-fields">
+          <label>Album
+            <input type="text" id="dAlbum" maxlength="60" placeholder="es. Album 3 — serie tedesche" value="${esc(rec(s.num).album || '')}">
+          </label>
+          <label>Pagina
+            <input type="text" id="dPag" maxlength="30" placeholder="es. 12 oppure 12–13" value="${esc(rec(s.num).pag || '')}">
+          </label>
+        </div>
+        <label class="d-note">Note
+          <textarea id="dNote" maxlength="300" rows="2" placeholder="stato di conservazione, provenienza, doppioni…">${esc(rec(s.num).note || '')}</textarea>
+        </label>
+        <p class="d-saved" id="dSaved">I dati della collezione restano salvati in questo browser.</p>
+      </div>
+
       <div class="d-links">
         <a href="${url(s.ebay_q)}" target="_blank" rel="noopener">Cerca «sang ${s.num}» su eBay ↗</a>
         <a href="${url(s.ebay_q2)}" target="_blank" rel="noopener">Cerca per titolo ↗</a>
       </div>`;
+
+    const flash = () => {
+      const el = $('#dSaved');
+      el.textContent = 'Salvato.'; el.classList.add('ok');
+      clearTimeout(flash.t);
+      flash.t = setTimeout(() => { el.textContent = 'I dati della collezione restano salvati in questo browser.'; el.classList.remove('ok'); }, 1600);
+    };
+    $('#dOwn').addEventListener('change', e => {
+      collSet(s.num, { own: e.target.checked }); flash();
+      const cb = document.querySelector(`#tbody input.own[data-n="${s.num}"]`);
+      if (cb) { cb.checked = e.target.checked; cb.closest('tr').classList.toggle('mine', e.target.checked); }
+      if (state.owns.size === 1) apply();
+    });
+    const fld = (id, key) => $(id).addEventListener('input', e => {
+      collSet(s.num, { [key]: e.target.value }); flash(); renderRowLoc(s.num);
+    });
+    fld('#dAlbum', 'album'); fld('#dPag', 'pag'); fld('#dNote', 'note');
+
     $('#drawer').hidden = false;
+  }
+
+  /* aggiorna la riga in tabella con la collocazione, senza ridisegnare tutto */
+  function renderRowLoc(num) {
+    const tr = document.querySelector(`#tbody tr[data-n="${num}"]`);
+    if (!tr) return;
+    const r = rec(num), cell = tr.children[2];
+    let el = cell.querySelector('.loc');
+    if (!r.album && !r.pag) { if (el) el.remove(); return; }
+    if (!el) { el = document.createElement('span'); el.className = 'loc'; cell.appendChild(el); }
+    el.innerHTML = `${r.album ? esc(r.album) : 'album non indicato'}${r.pag ? ' · p. ' + esc(r.pag) : ''}`;
   }
 
   /* ------------------------------------------------------------------ monitoraggio */

@@ -238,3 +238,64 @@ abbr{text-decoration:none; cursor:help}
   .kpi b{font-size:var(--text-xl)}
 }
 .tag-ed{border-color:#b9c4ce; background:#eef2f6; color:#4a5a68}
+
+/* ------------------------------------------------------------ la mia collezione */
+.mycoll{
+  display:flex; align-items:center; justify-content:space-between; gap:var(--space-4);
+  flex-wrap:wrap; margin-top:var(--space-4); padding:var(--space-3) var(--space-4);
+  background:var(--paper-2); border:1px solid var(--line-2); border-left:3px solid var(--gold);
+  border-radius:var(--radius);
+}
+.mycoll p{margin:0; font-size:var(--text-sm); color:var(--ink-2)}
+.mycoll b{font-variant-numeric:tabular-nums; color:var(--ink)}
+.coll-act{display:flex; gap:var(--space-2); flex-wrap:wrap}
+.btn.sm{min-height:34px; padding:var(--space-2) var(--space-3); font-size:var(--text-xs)}
+.btn.ghost{background:transparent; color:var(--ink-2); border-style:dashed}
+.btn.ghost:hover{background:var(--oxblood); color:#fff; border-style:solid}
+.coll-warn{
+  margin:var(--space-3) 0 0; padding:var(--space-3) var(--space-4); border-radius:var(--radius);
+  background:#fdf3e3; border:1px solid #e3cfa5; color:#6b5220; font-size:var(--text-xs);
+}
+.coll-warn[hidden]{display:none}
+
+/* casella di possesso in tabella */
+.grid th.chk, .grid td.chk{width:52px; text-align:center; padding-left:var(--space-3); padding-right:var(--space-2)}
+.grid td.chk{cursor:default}
+input[type=checkbox]{
+  appearance:none; -webkit-appearance:none; width:18px; height:18px; margin:0; cursor:pointer;
+  border:1.5px solid var(--line); border-radius:3px; background:var(--paper-2);
+  display:inline-grid; place-content:center; vertical-align:middle; transition:background .14s, border-color .14s;
+}
+input[type=checkbox]:hover{border-color:var(--oxblood-2)}
+input[type=checkbox]:checked{background:var(--oxblood); border-color:var(--oxblood)}
+input[type=checkbox]:checked::after{content:''; width:9px; height:5px; border:2px solid #fff; border-top:0; border-right:0; transform:rotate(-45deg) translateY(-1px)}
+input[type=checkbox]:focus-visible{outline:2px solid var(--oxblood-2); outline-offset:2px}
+.grid tr.mine{background:rgba(154,123,47,.07)}
+.grid tr.mine td.chk{box-shadow:inset 3px 0 0 var(--gold)}
+.grid .loc{
+  display:inline-block; margin-top:3px; font-size:var(--text-xs); color:var(--gold);
+  border:1px solid #e0d3b4; background:#fbf6ea; border-radius:999px; padding:1px 8px;
+}
+
+/* blocco collezione nella scheda di dettaglio */
+.d-coll{
+  background:var(--paper-2); border:1px solid var(--line-2); border-radius:var(--radius);
+  padding:var(--space-4); display:flex; flex-direction:column; gap:var(--space-3);
+}
+.d-fields{display:flex; gap:var(--space-3); flex-wrap:wrap}
+.d-fields label{flex:1 1 160px}
+.d-coll label{font-size:var(--text-xs); text-transform:uppercase; letter-spacing:.07em; color:var(--ink-3); font-weight:500; display:flex; flex-direction:column; gap:var(--space-2)}
+.d-coll label.d-own{flex-direction:row; align-items:center; gap:var(--space-3); cursor:pointer}
+.d-own span{text-transform:none; letter-spacing:0; font-size:var(--text-sm); color:var(--ink); font-weight:400}
+.d-coll input[type=text], .d-coll textarea{
+  font:inherit; font-size:var(--text-sm); color:var(--ink); background:var(--paper);
+  border:1px solid var(--line); border-radius:var(--radius); padding:var(--space-2) var(--space-3);
+  min-height:38px; width:100%; resize:vertical;
+}
+.d-coll input[type=text]:focus-visible, .d-coll textarea:focus-visible{outline:2px solid var(--oxblood-2); outline-offset:2px}
+.d-saved{margin:0; font-size:var(--text-xs); color:var(--ink-3); transition:color .2s}
+.d-saved.ok{color:var(--green); font-weight:500}
+
+@media (max-width:640px){
+  .mycoll{flex-direction:column; align-items:flex-start}
+}

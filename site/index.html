@@ -117,13 +117,30 @@
           </div>
         </div>
         <div class="field">
-          <label>&nbsp;</label>
+          <label>La mia collezione</label>
+          <div class="chips" id="owns">
+            <button class="chip" data-own="si">Serie che possiedo</button>
+            <button class="chip" data-own="no">Serie mancanti</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Altre opzioni</label>
           <div class="chips">
             <button class="chip" id="onlyAuct">Solo con asta in corso</button>
             <button class="chip ghost" id="reset">Azzera filtri</button>
           </div>
         </div>
       </div>
+
+      <div class="mycoll" id="mycoll">
+        <p id="collStat">Nessuna serie ancora contrassegnata come tua. Spunta la casella nella colonna <b>Mia</b> per iniziare a costruire l'inventario.</p>
+        <div class="coll-act">
+          <button class="btn sm" id="collExport">Esporta la collezione</button>
+          <button class="btn sm ghost" id="collImportBtn">Importa da file</button>
+          <input type="file" id="collImport" accept="application/json,.json" hidden>
+        </div>
+      </div>
+      <p class="coll-warn" id="collWarn" hidden></p>
 
       <p class="count" id="count"></p>
     </div>
@@ -132,6 +149,7 @@
       <table class="grid" id="tbl">
         <thead>
           <tr>
+            <th class="chk" title="Serie in mio possesso">Mia</th>
             <th class="num">Sang.</th>
             <th>Titolo della serie</th>
             <th class="num">Anno</th>
@@ -260,7 +278,20 @@
           di catalogazione della raccolta di riferimento.</li>
       </ul>
 
-      <h3 class="h-min">6. Aggiornamento</h3>
+      <h3 class="h-min">6. La mia collezione</h3>
+      <p>La colonna <b>Mia</b> in testa alla tabella serve a contrassegnare le serie in tuo possesso. Aprendo la scheda
+        di una serie puoi indicare <b>album</b> e <b>pagina</b> in cui è collocata, più una nota libera per stato di
+        conservazione, provenienza o doppioni. Album e pagina compaiono poi direttamente in tabella sotto il titolo,
+        e i filtri <b>Serie che possiedo</b> e <b>Serie mancanti</b> permettono di leggere il catalogo come inventario
+        o come lista dei desideri. La barra sopra la tabella riporta quante serie possiedi, la percentuale sul totale e
+        il valore di mercato complessivo della raccolta.</p>
+      <p class="warn">Questi dati sono <b>tuoi e restano nel tuo browser</b>: non vengono inviati a nessun server e non
+        sono visibili ad altri. Di conseguenza non si trasferiscono automaticamente su un altro dispositivo e si
+        perdono se cancelli i dati di navigazione. Usa <b>Esporta la collezione</b> per salvare un file di backup e
+        <b>Importa da file</b> per rileggerlo altrove. L'aggiornamento giornaliero delle quotazioni non tocca le tue
+        annotazioni.</p>
+
+      <h3 class="h-min">7. Aggiornamento</h3>
       <p>Un'attività pianificata rilegge ogni giorno le inserzioni attive, ricostruisce i prezzi e ripubblica il
         catalogo a questo stesso indirizzo. La data dell'ultimo rilevamento è indicata in testa alla pagina.</p>
     </div>
