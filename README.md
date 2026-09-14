@@ -24,10 +24,9 @@ site/                      sito statico (nessun backend)
 build_dataset.py           pipeline: sorgenti -> catalogo.json
 parse_pages.py             parser di pagine eBay salvate su file
 AGGIORNAMENTO_GIORNALIERO.md  procedura di aggiornamento quotidiano
-dati/
-  afil_rows.json           tavola di concordanza delle serie (6.544 righe)
-  mlc_all.json             dati storici complementari
-  ebay_active.json         ultimo rilevamento delle inserzioni attive
+afil_rows.json             tavola di concordanza delle serie (6.544 righe)
+mlc_all.json               dati storici complementari
+ebay_active.json           ultimo rilevamento delle inserzioni attive
 ```
 
 ## Come rigenerare il catalogo
@@ -36,7 +35,7 @@ dati/
 python build_dataset.py
 ```
 
-Legge le sorgenti in `dati/`, abbina le inserzioni alle serie (per numero Sanguinetti e, in mancanza, per titolo), calcola quotazioni, scostamenti e rarità, e riscrive `site/data/catalogo.json`.
+Legge le sorgenti nella radice del repository, abbina le inserzioni alle serie (per numero Sanguinetti e, in mancanza, per titolo), calcola quotazioni, scostamenti e rarità, e riscrive `site/data/catalogo.json`.
 
 L'abbinamento usa una serie di espressioni regolari sui titoli delle inserzioni per estrarre il numero di serie (`SANG. 123`, `serie n° 123`, `123 (1898)`, `S.123`, …), scartando i numeri incompatibili con l'anno di emissione dichiarato.
 
