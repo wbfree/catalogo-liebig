@@ -61,13 +61,14 @@ def raccogli(pagine, attesa, visibile):
             headless=not visibile,
             # --disable-dev-shm-usage e' indispensabile in Docker: /dev/shm
             # predefinito e' 64 MB e Chromium ci muore sopra
-            args=["--disable-dev-shm-usage", "--no-sandbox", "--disable-gpu"])
+            args=["--disable-dev-shm-usage", "--no-sandbox", "--disable-gpu",
+                  # le immagini non servono all'estrazione e sono la voce di
+                  # consumo piu' pesante. Si bloccano nel motore: farlo con
+                  # ctx.route costringerebbe ogni singola richiesta a un
+                  # viaggio fino a Python, e su un Celeron si sente.
+                  "--blink-settings=imagesEnabled=false"])
         ctx = browser.new_context(locale="it-IT", user_agent=UA,
                                   viewport={"width": 1440, "height": 900})
-        # immagini, font e video non servono all'estrazione e su un NAS con
-        # 2 GB di RAM sono la voce di consumo piu' pesante
-        ctx.route("**/*", lambda rotta: rotta.abort()
-                  if rotta.request.resource_type in ("image", "media", "font") else rotta.continue_())
         pag = ctx.new_page()
         pag.set_default_timeout(45_000)
 
@@ -80,24 +81,26 @@ def raccogli(pagine, attesa, visibile):
         # banner, e' qui che va messa la scelta (rifiutando i non essenziali).
 
         for i, q in enumerate(QUERIES, 1):
-            prima = len(righe)
             for p in range(1, pagine + 1):
                 url = (f"https://www.ebay.it/sch/i.html?_nkw={q.replace(' ', '+')}"
                        f"&_ipg=240&_pgn={p}")
+                prima = len(righe)
                 try:
                     pag.goto(url, wait_until="domcontentloaded")
                     pag.wait_for_timeout(int(attesa * 1000 + random.uniform(0, 600)))
                     lotto = json.loads(pag.evaluate(ESTRAI))
                 except (PWError, json.JSONDecodeError) as e:
-                    log(f"  {q!r} pagina {p}: lettura non riuscita ({type(e).__name__}), passo oltre")
-                    break
-                if not lotto:
+                    log(f"{i:2}/{len(QUERIES)} {q[:28]:<28} pag.{p}  lettura non riuscita "
+                        f"({type(e).__name__}), passo alla query successiva")
                     break
                 for b in lotto:
                     if b["u"] not in visti:
                         visti.add(b["u"])
                         righe.append(b)
-            log(f"{i:2}/{len(QUERIES)}  {q:<38} +{len(righe) - prima:>4}  (totale {len(righe)})")
+                log(f"{i:2}/{len(QUERIES)} {q[:28]:<28} pag.{p}  letti {len(lotto):>3}"
+                    f"  nuovi {len(righe) - prima:>3}  totale {len(righe)}")
+                if not lotto:
+                    break
 
         browser.close()
     return righe
