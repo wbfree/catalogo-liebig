@@ -8,6 +8,16 @@ Serve **solo per il job giornaliero**. Il sito e' fatto di file statici che
 parlano direttamente con Supabase: non ha bisogno di questo contenitore, ne' di
 essere sullo stesso computer.
 
+Chi fa cosa, per non confondersi:
+
+| | |
+|---|---|
+| **Container Manager** | costruisce l'immagine e mostra log, immagini e spazio occupato |
+| **Task Scheduler** | e' l'unico posto dove vive la pianificazione giornaliera |
+
+Un lavoro che comincia e finisce non e' un servizio: non va lasciato in moto dalla GUI di
+Container Manager, va avviato dal Task Scheduler una volta al giorno.
+
 ## 1. Preparazione
 
 Su DSM 7, da Package Center, installa **Container Manager** (nelle versioni piu'
@@ -32,17 +42,40 @@ chmod 600 /volume1/docker/catalogo-liebig/.env
 
 ## 2. Costruzione dell'immagine
 
-Una volta sola, da SSH:
+Serve una volta sola. Su questo processore ci vogliono diversi minuti (scarica Chromium
+e le sue dipendenze di sistema) e l'immagine occupa circa 1,5 GB.
+
+### Con Container Manager, senza riga di comando
+
+**Container Manager → Progetto → Crea**
+
+- **Nome progetto**: `catalogo-liebig`
+- **Percorso**: `/volume1/docker/catalogo-liebig/automazione`
+- **Sorgente**: usa il `docker-compose.yml` gia' presente nella cartella
+
+Alla creazione Container Manager costruisce l'immagine e **avvia subito il progetto**:
+vale come prima esecuzione completa, quindi mettiti l'anima in pace per mezz'ora e
+guarda i log dalla scheda del progetto.
+
+Finita quella, il container esce da solo e il progetto risulta **fermo**: e' normale e
+giusto. Questo non e' un servizio che deve restare acceso, e' un lavoro che comincia e
+finisce. Per lo stesso motivo nel `docker-compose.yml` c'e' `restart: "no"`, altrimenti
+Container Manager lo rimetterebbe in moto in continuazione.
+
+Da li' in poi **non far partire il progetto dalla GUI**: ci pensa il Task Scheduler al
+passo 4, che e' l'unico posto dove la pianificazione deve stare. Container Manager resta
+utile per guardare i log, l'immagine e lo spazio occupato.
+
+### Oppure da SSH
 
 ```bash
 cd /volume1/docker/catalogo-liebig/automazione && /usr/local/bin/docker compose build
 ```
 
-Su questo processore ci vogliono diversi minuti: scarica Chromium e le sue
-dipendenze di sistema. L'immagine occupa circa 1,5 GB.
+### In entrambi i casi
 
-Il codice del progetto **non** entra nell'immagine, arriva dal volume montato:
-quando aggiorni il repository non devi ricostruire nulla. La ricostruzione serve
+Il codice del progetto **non** entra nell'immagine, arriva dal volume montato: quando
+aggiorni il repository con `git pull` non devi ricostruire nulla. La ricostruzione serve
 solo se cambi le versioni di `psycopg` o `playwright` nel `Dockerfile`.
 
 ## 3. Prova a mano
