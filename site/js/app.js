@@ -12,21 +12,46 @@
   let SERIE = [], META = {}, VIEW = [];
 
   /* ------------------------------------------------------------------ la mia collezione
-     Archivio locale: { "<numero serie>": { own: true, album: "", pag: "", note: "" } }
-     Salvato nel browser (localStorage). Se il browser lo blocca, resta in memoria
-     per la sessione corrente e lo segnaliamo con un avviso. */
-  const KEY = 'liebig.collezione.v1';
+     Archivio: { "<numero serie>": { own: true, album: "", pag: "", note: "" } }
+     Conservato nel browser dell'utente in cookie di lunga durata, suddivisi in
+     segmenti da 3.400 caratteri per rispettare il limite dei 4 KB per cookie.
+     Nessun dato lascia il browser. Se i cookie non sono scrivibili, l'archivio
+     resta in memoria per la sessione corrente e l'avviso lo segnala. */
+  const CK = '__Host-lbg', CK_MAX = 3400, CK_N = 40;
   let COLL = {}, COLL_OK = true;
+
+  const ckRead = () => document.cookie.split('; ').reduce((m, c) => {
+    const i = c.indexOf('='); if (i > 0) m[c.slice(0, i)] = c.slice(i + 1); return m;
+  }, {});
+  const ckSet = (name, val) => {
+    document.cookie = `${name}=${val}; path=/; max-age=${60 * 60 * 24 * 3650}; samesite=lax; secure`;
+  };
+  const ckDel = name => { document.cookie = `${name}=; path=/; max-age=0; samesite=lax; secure`; };
 
   function collLoad() {
     try {
-      COLL = JSON.parse(localStorage.getItem(KEY) || '{}') || {};
-    } catch (e) { COLL = {}; COLL_OK = false; }
+      const ck = ckRead();
+      let raw = '';
+      for (let i = 0; i < CK_N; i++) {
+        const part = ck[CK + i];
+        if (part == null) break;
+        raw += part;
+      }
+      COLL = raw ? (JSON.parse(decodeURIComponent(raw)) || {}) : {};
+    } catch (e) { COLL = {}; }
   }
   function collSave() {
     try {
-      localStorage.setItem(KEY, JSON.stringify(COLL));
-    } catch (e) { COLL_OK = false; collWarn(); }
+      const raw = encodeURIComponent(JSON.stringify(COLL));
+      const parts = [];
+      for (let i = 0; i < raw.length; i += CK_MAX) parts.push(raw.slice(i, i + CK_MAX));
+      if (parts.length > CK_N) throw new Error('archivio troppo grande');
+      parts.forEach((p, i) => ckSet(CK + i, p));
+      const ck = ckRead();
+      for (let i = parts.length; i < CK_N; i++) { if (ck[CK + i] != null) ckDel(CK + i); else break; }
+      COLL_OK = parts.length === 0 || ckRead()[CK + '0'] != null;
+    } catch (e) { COLL_OK = false; }
+    collWarn();
   }
   const rec = n => COLL[n] || {};
   const owned = n => !!rec(n).own;
@@ -38,7 +63,7 @@
   function collWarn() {
     const el = $('#collWarn');
     el.hidden = COLL_OK;
-    if (!COLL_OK) el.innerHTML = 'Questo browser non permette di salvare i dati della collezione in locale: le spunte e i riferimenti di album restano validi solo fino alla chiusura della pagina. Apri il sito su <b>liebig.pplx.app</b> oppure usa <b>Esporta la collezione</b> per conservare un file di backup.';
+    if (!COLL_OK) el.innerHTML = 'Questo browser non sta conservando i dati della collezione: le spunte e i riferimenti di album restano validi solo fino alla chiusura della pagina. Apri il catalogo direttamente su <b>liebig.pplx.app</b>, anziché dentro un\'anteprima, oppure usa <b>Esporta la collezione</b> per conservare un file di backup.';
   }
   function collStat() {
     const nums = Object.keys(COLL).filter(n => COLL[n].own);
@@ -300,7 +325,7 @@
         <label class="d-note">Note
           <textarea id="dNote" maxlength="300" rows="2" placeholder="stato di conservazione, provenienza, doppioni…">${esc(rec(s.num).note || '')}</textarea>
         </label>
-        <p class="d-saved" id="dSaved">I dati della collezione restano salvati in questo browser.</p>
+        <p class="d-saved" id="dSaved">I dati della collezione restano nel tuo browser.</p>
       </div>
 
       <div class="d-links">
@@ -312,7 +337,7 @@
       const el = $('#dSaved');
       el.textContent = 'Salvato.'; el.classList.add('ok');
       clearTimeout(flash.t);
-      flash.t = setTimeout(() => { el.textContent = 'I dati della collezione restano salvati in questo browser.'; el.classList.remove('ok'); }, 1600);
+      flash.t = setTimeout(() => { el.textContent = 'I dati della collezione restano nel tuo browser.'; el.classList.remove('ok'); }, 1600);
     };
     $('#dOwn').addEventListener('change', e => {
       collSet(s.num, { own: e.target.checked }); flash();
