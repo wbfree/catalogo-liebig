@@ -136,6 +136,34 @@ job sparirebbe senza preavviso.
 La raccolta dura 25-30 minuti, quindi partendo alle 07:30 il rilevamento e' pubblicato
 verso le 08:00. Non serve che il sito venga ripubblicato: legge i dati dal database.
 
+### La raccolta sembra ferma
+
+Se non compaiono righe di avanzamento e la CPU del container resta vicina allo zero,
+non e' lentezza: e' attesa. Per capire dove:
+
+```bash
+cd /volume1/docker/catalogo-liebig/automazione
+/usr/local/bin/docker compose run --rm --entrypoint python aggiornamento     automazione/raccolta_ebay.py --diagnosi
+```
+
+Prova un pezzo alla volta cronometrando: DNS, connessione a eBay, avvio di Chromium,
+apertura della scheda, caricamento della home, caricamento di una pagina di ricerca ed
+estrazione. La prima riga che si ferma o fallisce dice dove e' il problema.
+
+| Dove si ferma | Cosa vuol dire |
+|---|---|
+| DNS o connessione TCP | il container non ha rete o non risolve i nomi |
+| avvio di Chromium | dipendenze mancanti nell'immagine, oppure `/dev/shm` troppo piccolo |
+| caricamento delle pagine | eBay non risponde da quell'indirizzo IP |
+| estrazione a zero inserzioni | i selettori sono cambiati, o eBay serve una pagina di blocco |
+
+Con la CPU a zero e nessuna riga di log, guarda anche se il container e' davvero vivo:
+
+```bash
+/usr/local/bin/docker stats --no-stream
+/usr/local/bin/docker ps
+```
+
 ### La costruzione dell'immagine fallisce sui font
 
 ```

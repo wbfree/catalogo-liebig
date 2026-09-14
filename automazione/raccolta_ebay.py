@@ -105,6 +105,58 @@ def raccogli(pagine, attesa, visibile):
         browser.close()
     return righe
 
+def diagnosi():
+    """Prova un pezzo alla volta, cronometrando, per capire dove ci si ferma.
+
+    Serve quando la raccolta sembra bloccata: distingue un Chromium che non
+    parte da una rete che non risponde da una pagina che non si lascia leggere.
+    """
+    import socket
+    from playwright.sync_api import sync_playwright
+
+    def passo(nome, funzione):
+        t = time.time()
+        try:
+            esito = funzione()
+            # solo i risultati testuali o numerici sono utili da vedere:
+            # browser e schede stamperebbero oggetti illeggibili
+            nota = esito if isinstance(esito, (str, int)) else ""
+            log(f"  OK      {nome:<34} {time.time() - t:5.1f}s  {nota}")
+            return esito
+        except Exception as e:
+            log(f"  FALLITO {nome:<34} {time.time() - t:5.1f}s  {type(e).__name__}: {str(e)[:120]}")
+            raise
+
+    log("diagnosi dell'ambiente di raccolta")
+    passo("risoluzione DNS di ebay.it", lambda: socket.gethostbyname("www.ebay.it"))
+    passo("connessione TCP a ebay.it:443",
+          lambda: (socket.create_connection(("www.ebay.it", 443), timeout=20).close(), "raggiungibile")[1])
+
+    with sync_playwright() as pw:
+        browser = passo("avvio di Chromium", lambda: pw.chromium.launch(
+            headless=True, timeout=60_000,
+            args=["--disable-dev-shm-usage", "--no-sandbox", "--disable-gpu",
+                  "--blink-settings=imagesEnabled=false"]))
+        ctx = passo("creazione del contesto", lambda: browser.new_context(
+            locale="it-IT", user_agent=UA, viewport={"width": 1440, "height": 900}))
+        pag = passo("apertura della scheda", lambda: ctx.new_page())
+        pag.set_default_timeout(60_000)
+        passo("caricamento della home di ebay.it",
+              lambda: (pag.goto("https://www.ebay.it", wait_until="domcontentloaded"), "caricata")[1])
+        passo("caricamento di una pagina di ricerca",
+              lambda: (pag.goto("https://www.ebay.it/sch/i.html?_nkw=figurine+liebig&_ipg=240&_pgn=1",
+                                wait_until="domcontentloaded"), "caricata")[1])
+        n = passo("estrazione delle inserzioni",
+                  lambda: len(json.loads(pag.evaluate(ESTRAI))))
+        browser.close()
+
+    if n:
+        log(f"tutto a posto: {n} inserzioni lette dalla prima pagina.")
+        return 0
+    log("la pagina si carica ma non contiene inserzioni: selettori cambiati, "
+        "oppure eBay sta servendo una pagina diversa (blocco o consenso).")
+    return 1
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--pagine", type=int, default=8, help="pagine per query (default 8)")
@@ -112,7 +164,15 @@ def main():
     ap.add_argument("--visibile", action="store_true", help="mostra il browser, per capire cosa succede")
     ap.add_argument("--minimo", type=int, default=3000,
                     help="sotto questo numero di inserzioni la raccolta e' considerata fallita")
+    ap.add_argument("--diagnosi", action="store_true",
+                    help="prova un pezzo alla volta e dice dove ci si ferma, senza raccogliere")
     a = ap.parse_args()
+
+    if a.diagnosi:
+        try:
+            return diagnosi()
+        except Exception:
+            return 1
 
     inizio = time.time()
     righe = raccogli(a.pagine, a.attesa, a.visibile)
