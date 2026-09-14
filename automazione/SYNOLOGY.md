@@ -42,29 +42,27 @@ chmod 600 /volume1/docker/catalogo-liebig/.env
 
 ## 2. Costruzione dell'immagine
 
-Serve una volta sola. Su questo processore ci vogliono diversi minuti (scarica Chromium
-e le sue dipendenze di sistema) e l'immagine occupa circa 1,5 GB.
+**Non serve fare niente a mano.** Alla prima esecuzione `nas_job.sh` si accorge che
+l'immagine non c'e' e la costruisce da solo. Salta al passo 4, crea il compito
+pianificato e premi **Run** dalla GUI del Task Scheduler: la prima esecuzione costruisce
+e poi aggiorna. Ci vogliono diversi minuti in piu' perche' scarica Chromium; l'immagine
+occupa circa 1,5 GB.
 
-### Con Container Manager, senza riga di comando
+### Perche' non il Progetto di Container Manager
 
-**Container Manager → Progetto → Crea**
+Sconsigliato, e non per gusto. Il `docker-compose.yml` usa percorsi **relativi alla
+propria posizione**: il `Dockerfile` accanto e il repository in `..`. Creando un Progetto,
+Container Manager puo' collocare il compose in una cartella propria, e allora quei
+percorsi puntano nel vuoto:
 
-- **Nome progetto**: `catalogo-liebig`
-- **Percorso**: `/volume1/docker/catalogo-liebig/automazione`
-- **Sorgente**: usa il `docker-compose.yml` gia' presente nella cartella
+```
+unable to prepare context: unable to evaluate symlinks in Dockerfile path
+```
 
-Alla creazione Container Manager costruisce l'immagine e **avvia subito il progetto**:
-vale come prima esecuzione completa, quindi mettiti l'anima in pace per mezz'ora e
-guarda i log dalla scheda del progetto.
-
-Finita quella, il container esce da solo e il progetto risulta **fermo**: e' normale e
-giusto. Questo non e' un servizio che deve restare acceso, e' un lavoro che comincia e
-finisce. Per lo stesso motivo nel `docker-compose.yml` c'e' `restart: "no"`, altrimenti
-Container Manager lo rimetterebbe in moto in continuazione.
-
-Da li' in poi **non far partire il progetto dalla GUI**: ci pensa il Task Scheduler al
-passo 4, che e' l'unico posto dove la pianificazione deve stare. Container Manager resta
-utile per guardare i log, l'immagine e lo spazio occupato.
+`nas_job.sh` non ha questo problema perche' entra nella cartella giusta prima di lanciare
+compose. Se proprio vuoi usare un Progetto, deve puntare esattamente a
+`/volume1/docker/catalogo-liebig/automazione`, la cartella dove stanno **sia** il compose
+**sia** il Dockerfile.
 
 ### Oppure da SSH
 
@@ -72,7 +70,7 @@ utile per guardare i log, l'immagine e lo spazio occupato.
 cd /volume1/docker/catalogo-liebig/automazione && /usr/local/bin/docker compose build
 ```
 
-### In entrambi i casi
+### In ogni caso
 
 Il codice del progetto **non** entra nell'immagine, arriva dal volume montato: quando
 aggiorni il repository con `git pull` non devi ricostruire nulla. La ricostruzione serve

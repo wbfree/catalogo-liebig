@@ -1,9 +1,17 @@
 # Da lanciare dalla cartella automazione/:
 #   docker compose run --rm aggiornamento
+#
+# Se lo usi da Container Manager, il progetto deve puntare a QUESTA cartella:
+# il contesto di build e' relativo alla posizione di questo file, e qui accanto
+# deve esserci il Dockerfile.
 services:
   aggiornamento:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: catalogo-liebig:1
+    # l'immagine non sta in nessun registro: va costruita, non scaricata
+    pull_policy: build
     working_dir: /app
     volumes:
       # tutto il repository, cosi' il contenitore legge .env e le sorgenti

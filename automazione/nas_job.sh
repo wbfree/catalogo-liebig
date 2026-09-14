@@ -28,6 +28,22 @@ fi
 
 cd "$RADICE/automazione" || exit 1
 
+# Prima esecuzione: se l'immagine non c'e' la si costruisce qui. Cosi' non
+# serve ne' SSH ne' un progetto di Container Manager, e i percorsi relativi
+# del compose (il Dockerfile accanto, il repository in ..) sono corretti
+# perche' siamo gia' nella cartella giusta.
+if ! $COMPOSE images -q aggiornamento 2>/dev/null | grep -q .; then
+    echo "Immagine assente: la costruisco (diversi minuti, scarica Chromium)." | tee -a "$LOG"
+    STATO_BUILD="$(mktemp)"
+    { $COMPOSE build 2>&1; echo $? > "$STATO_BUILD"; } | tee -a "$LOG"
+    ESITO_BUILD="$(cat "$STATO_BUILD")"
+    rm -f "$STATO_BUILD"
+    if [ "$ESITO_BUILD" -ne 0 ]; then
+        echo "COSTRUZIONE FALLITA (codice $ESITO_BUILD). Dettaglio in $LOG" | tee -a "$LOG" >&2
+        exit "$ESITO_BUILD"
+    fi
+fi
+
 # stdout e stderr finiscono sia nel log sia nella posta del Task Scheduler.
 # L'esito passa da un file perche' in una pipeline $? e' quello di tee, non
 # quello del comando: senza questo accorgimento ogni esecuzione risulterebbe
