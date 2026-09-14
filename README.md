@@ -34,10 +34,11 @@ supabase/
   applica.py               applica le migrazioni non ancora applicate
 build_dataset.py           pipeline: sorgenti -> database Supabase
 automazione/
-  raccolta_ebay.py         raccolta delle inserzioni con Playwright
+  raccolta_ebay_api.py     raccolta delle inserzioni con la Browse API di eBay
+  raccolta_ebay.py         riserva: le stesse pagine lette con un browser
   aggiorna.sh              i due passi in sequenza, dentro il contenitore
   nas_job.sh               involucro per il Task Scheduler: log ed esito
-  Dockerfile               immagine con Python, psycopg e Chromium
+  Dockerfile               immagine con Python, psycopg e requests
   docker-compose.yml       esecuzione sul NAS
   SYNOLOGY.md              installazione e pianificazione su Synology
   stato.json               stato dell'ultima esecuzione della procedura pianificata
@@ -76,7 +77,7 @@ L'abbinamento usa una serie di espressioni regolari sui titoli delle inserzioni 
 
 ## Aggiornamento giornaliero
 
-Ogni mattina alle 07:30 (Europa/Roma) una procedura automatica rilegge le inserzioni attive su eBay.it con quattordici query, ricostruisce il dataset e scrive un nuovo rilevamento nel database. La raccolta e la ricostruzione stanno in `automazione/aggiorna.sh`, pensato per girare in un contenitore su un NAS. Il sito non va più ripubblicato ogni giorno: essendo i dati nel database, le pagine pubblicate cambiano solo quando cambia il codice. Il dettaglio dei passaggi è in `AGGIORNAMENTO_GIORNALIERO.md`.
+Ogni mattina alle 07:30 (Europa/Roma) una procedura automatica rilegge le inserzioni attive su eBay.it con la Browse API, usando quattordici chiavi di ricerca piu' una passata dedicata alle aste, ricostruisce il dataset e scrive un nuovo rilevamento nel database. La raccolta e la ricostruzione stanno in `automazione/aggiorna.sh`, pensato per girare in un contenitore su un NAS. Il sito non va più ripubblicato ogni giorno: essendo i dati nel database, le pagine pubblicate cambiano solo quando cambia il codice. Il dettaglio dei passaggi è in `AGGIORNAMENTO_GIORNALIERO.md`.
 
 Le inserzioni concluse non vengono raccolte: richiedono un accesso autenticato.
 
@@ -87,7 +88,7 @@ Le inserzioni concluse non vengono raccolte: richiedono un accesso autenticato.
 - Storia delle figurine Liebig: https://it.wikipedia.org/wiki/Figurine_Liebig
 - Collezione di riferimento: https://www.my-liebig-collection.it/history_2.asp
 - Elenco alternativo delle serie: http://www.cartolino.com/liebig/list.html
-- Prezzi di mercato: inserzioni attive pubbliche su https://www.ebay.it
+- Prezzi di mercato: inserzioni attive su https://www.ebay.it, lette con la Browse API
 
 ## Licenza e avvertenze
 

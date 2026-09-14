@@ -12,27 +12,49 @@ priorità alle prime sei (mercato italiano) e salva comunque un file parziale.
 
 ## 1. Raccolta inserzioni attive
 
-Non esiste un connettore eBay e una richiesta HTTP semplice riceve **403**: serve una
-sessione di browser vera. Se ne occupa `automazione/raccolta_ebay.py`, che usa Playwright.
+Si usa la **Browse API** di eBay, con le chiavi del keyset di produzione in `.env`
+(`EBAY_CLIENT_ID` e `EBAY_CLIENT_SECRET`).
 
 ```bash
-python automazione/raccolta_ebay.py
+python automazione/raccolta_ebay_api.py
 ```
 
-Quattordici query (sei sul mercato italiano, otto su quelli esteri), fino a 8 pagine da
-240 risultati ciascuna, con deduplica per URL dell'inserzione. Dura 25-30 minuti. Scrive
-`ebay_active.json` nella radice, in modo atomico, e mette una copia del rilevamento
+Quattordici chiavi di ricerca piu' una passata dedicata alle aste, fino a 10 pagine da
+200 risultati ciascuna, deduplicate per URL. Dura **un minuto e mezzo**. Scrive
+`ebay_active.json` nella radice in modo atomico e mette una copia del rilevamento
 precedente in `storico/`.
 
-Opzioni utili: `--pagine N` per accorciare, `--visibile` per guardare cosa fa il browser,
-`--minimo N` per la soglia sotto la quale la raccolta e' considerata fallita (3.000
-inserzioni per impostazione predefinita). Se la soglia non viene raggiunta il file **non**
-viene sostituito e lo script esce con codice 1, cosi' la pipeline non gira su dati monchi.
+Rispetto alla lettura delle pagine con un browser, che si faceva prima, cambia parecchio:
 
-Le inserzioni **concluse** richiedono login e sono protette da captcha: non vanno tentate.
+| | Browser | Browse API |
+|---|---|---|
+| Durata | 25-30 minuti | ~90 secondi |
+| Inserzioni raccolte | 9.609 | 11.501 |
+| Aste individuate | 89 | 1.347 |
+| Blocchi | 403, captcha | nessuno |
 
-Sul NAS questo passo gira dentro un contenitore Docker: vedi
-[automazione/SYNOLOGY.md](automazione/SYNOLOGY.md).
+Le aste meritano una nota: la ricerca per pertinenza non le fa quasi mai emergere, per
+questo lo script fa una passata a parte con `filter=buyingOptions:{AUCTION}`. Senza,
+il monitoraggio aste resterebbe quasi vuoto.
+
+L'API fornisce inoltre **esatti** i dati che prima venivano dedotti con espressioni
+regolari sul testo dell'inserzione: formato asta, numero di offerte e spedizione
+gratuita. `build_dataset.py` li usa quando ci sono e ricade sulle vecchie regole per i
+rilevamenti storici.
+
+Opzioni: `--pagine N` per la profondita', `--minimo N` per la soglia sotto la quale la
+raccolta e' considerata fallita (3.000 per impostazione predefinita; in quel caso il file
+**non** viene sostituito e lo script esce con codice 1), `--uscita PERCORSO` per scrivere
+altrove e confrontare senza toccare il rilevamento buono.
+
+Le inserzioni **concluse** non sono raccolte: servirebbero permessi che il keyset
+standard non ha.
+
+### Riserva: lettura delle pagine con un browser
+
+`automazione/raccolta_ebay.py` fa la stessa cosa con Playwright, ed e' conservato nel
+caso l'accesso all'API venga meno. Richiede pero' Chromium nell'immagine, che dalla
+versione 2 non c'e' piu': vedi [automazione/SYNOLOGY.md](automazione/SYNOLOGY.md).
 
 ## 2. Ricostruzione del dataset
 

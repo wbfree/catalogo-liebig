@@ -136,7 +136,12 @@ def carica_ebay():
             if re.search(rx, t):
                 ed = code
                 break
-        asta = bool(re.search(r"offert[ae]", r["r"], re.I)) and "Compralo Subito" not in r["r"]
+        # i rilevamenti presi con la Browse API portano il dato esatto; quelli
+        # vecchi, letti dalle pagine, lo fanno ancora dedurre dal testo
+        if "asta" in r:
+            asta = bool(r["asta"])
+        else:
+            asta = bool(re.search(r"offert[ae]", r["r"], re.I)) and "Compralo Subito" not in r["r"]
         # figurina sciolta vs serie completa
         singola = bool(re.search(
             r"\bfigurina\b|\bfig\.?\s*singol|\b1\s*(?:fig\b|figurina|quadro|chromo|card|cartoncino)"
@@ -151,7 +156,8 @@ def carica_ebay():
         out.append({"t": t, "prezzo": round(pz, 2), "num": num, "ed": ed,
                     "asta": asta, "url": r["u"], "tipo": tipo, "singola": singola,
                     "anno_ins": anno_ins,
-                    "sped": bool(re.search(r"Consegna gratuita", r["r"], re.I))})
+                    "sped": bool(r["sped"]) if "sped" in r
+                            else bool(re.search(r"Consegna gratuita", r["r"], re.I))})
     return out
 
 # ---------------------------------------------------------------- match per titolo
@@ -176,7 +182,27 @@ def db_url():
         sys.exit("Manca SUPABASE_DB_URL: mettila in .env o nell'ambiente.")
     return url
 
-def scrivi_supabase(serie, meta):
+def controlla_crollo(cur, meta, soglia):
+    """Rifiuta una raccolta visibilmente incompleta.
+
+    La pipeline gira senza nessuno che guardi: se la lettura di eBay va male a
+    meta' strada, senza questo controllo il catalogo verrebbe ripubblicato con
+    le quotazioni azzerate e nessuno se ne accorgerebbe fino a danno fatto.
+    Restituisce il motivo del rifiuto, oppure None se si puo' procedere.
+    """
+    riga = cur.execute("select meta from public.rilevamenti where corrente").fetchone()
+    if not riga:
+        return None                      # primo rilevamento: non c'e' con cosa confrontare
+    prima = riga[0]
+    for campo, etichetta in (("n_inserzioni", "inserzioni lette"),
+                             ("serie_con_mercato", "serie con mercato attivo")):
+        vecchio, adesso = prima.get(campo), meta.get(campo)
+        if vecchio and adesso is not None and adesso < vecchio * soglia:
+            return (f"{etichetta}: {adesso} contro {vecchio} del rilevamento precedente "
+                    f"({adesso / vecchio * 100:.0f}%, soglia {soglia * 100:.0f}%)")
+    return None
+
+def scrivi_supabase(serie, meta, soglia=0.6, forza=False):
     """Pubblica il rilevamento in una sola transazione.
 
     Il nuovo rilevamento nasce non corrente: diventa corrente solo in fondo,
@@ -186,6 +212,14 @@ def scrivi_supabase(serie, meta):
     oggi = datetime.date.today()
     with psycopg.connect(db_url(), connect_timeout=30, autocommit=False) as conn:
         cur = conn.cursor()
+
+        motivo = controlla_crollo(cur, meta, soglia)
+        if motivo and not forza:
+            sys.exit(f"RACCOLTA INCOMPLETA, non pubblico nulla -> {motivo}. "
+                     f"Il sito resta sul rilevamento precedente. Ripeti la raccolta, "
+                     f"oppure rilancia con --forza se il calo e' reale.")
+        if motivo:
+            print(f"ATTENZIONE, pubblico lo stesso per via di --forza -> {motivo}")
 
         # 1. anagrafica: cambia solo se la fonte viene rivista
         cur.executemany("""
@@ -243,7 +277,7 @@ def scrivi_supabase(serie, meta):
           + (f", potate {potati} inserzioni di rilevamenti vecchi" if potati > 0 else ""))
 
 
-def main():
+def main(soglia=0.6, forza=False, prova=False):
     serie = carica_serie()
     listings = carica_ebay()
     print(f"serie in catalogo: {len(serie)}")
@@ -396,7 +430,27 @@ def main():
         "serie_con_mercato": sum(1 for s in serie if s["offerte"] > 0),
         "mediana_globale": round(globale, 2),
     }
-    scrivi_supabase(serie, meta)
+    if prova:
+        print("--- modalita' di prova: nessuna scrittura sul database ---")
+        print(json.dumps(meta, indent=2, ensure_ascii=False))
+        print(collections.Counter(s["rarita"] for s in serie))
+        print(collections.Counter(s["fascia"] for s in serie))
+        return serie, meta
+
+    scrivi_supabase(serie, meta, soglia=soglia, forza=forza)
+    return serie, meta
+
+def leggi_opzioni():
+    import argparse
+    ap = argparse.ArgumentParser(description="Costruisce il rilevamento e lo scrive su Supabase.")
+    ap.add_argument("--forza", action="store_true",
+                    help="pubblica anche se la raccolta sembra incompleta")
+    ap.add_argument("--soglia", type=float, default=0.6,
+                    help="quota minima rispetto al rilevamento precedente (default 0.6)")
+    ap.add_argument("--prova", action="store_true",
+                    help="calcola tutto e mostra il risultato senza scrivere sul database")
+    return ap.parse_args()
 
 if __name__ == "__main__":
-    main()
+    o = leggi_opzioni()
+    main(soglia=o.soglia, forza=o.forza, prova=o.prova)

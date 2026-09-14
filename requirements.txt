@@ -1,8 +1,8 @@
 # pipeline del catalogo
 psycopg[binary]>=3.2
-# raccolta delle inserzioni da eBay: serve un browser vero, una richiesta HTTP
-# semplice riceve 403. Sul NAS lo installa il Dockerfile in automazione/;
-# qui serve solo per lanciare raccolta_ebay.py a mano.
+# raccolta delle inserzioni con la Browse API di eBay
+requests>=2.31
+# solo per la riserva a browser (automazione/raccolta_ebay.py) e per
+# parse_pages.py: non servono al funzionamento normale
 playwright==1.47.0
-# solo per parse_pages.py, il parser delle pagine eBay salvate su file
 beautifulsoup4>=4.12

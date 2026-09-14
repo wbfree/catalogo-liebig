@@ -1,8 +1,12 @@
 # Aggiornamento giornaliero su Synology DS218+
 
-Il DS218+ (Celeron J3355, x86-64, 2 GB) regge il lavoro: Chromium headless gira,
-a patto di non fargli caricare immagini e di dargli abbastanza `/dev/shm`. Sono
-entrambe cose gia' previste in `raccolta_ebay.py` e `docker-compose.yml`.
+Dalla versione 2 la raccolta usa la **Browse API di eBay** invece di un browser: niente
+Chromium, immagine di poche decine di MB, costruzione in meno di un minuto e
+aggiornamento completo in circa due. Sul DS218+ (Celeron J3355, 2 GB) il lavoro e'
+diventato trascurabile.
+
+Servono le chiavi eBay in `.env`: `EBAY_CLIENT_ID` e `EBAY_CLIENT_SECRET`, dal keyset di
+**produzione**.
 
 Serve **solo per il job giornaliero**. Il sito e' fatto di file statici che
 parlano direttamente con Supabase: non ha bisogno di questo contenitore, ne' di
@@ -133,13 +137,14 @@ presidiato.
 Non modificare `/etc/crontab` a mano: DSM lo riscrive agli aggiornamenti di sistema e il
 job sparirebbe senza preavviso.
 
-La raccolta dura 25-30 minuti, quindi partendo alle 07:30 il rilevamento e' pubblicato
-verso le 08:00. Non serve che il sito venga ripubblicato: legge i dati dal database.
+L'aggiornamento completo dura un paio di minuti, quindi partendo alle 07:30 il
+rilevamento e' pubblicato entro le 07:35. Non serve che il sito venga ripubblicato: legge i dati dal database.
 
 ### La raccolta sembra ferma
 
-Se non compaiono righe di avanzamento e la CPU del container resta vicina allo zero,
-non e' lentezza: e' attesa. Per capire dove:
+Con la Browse API non dovrebbe succedere: l'intera raccolta dura circa 90 secondi e ogni
+chiave lascia una riga. Se invece stai usando la riserva a browser e non compaiono righe
+con la CPU vicina allo zero, non e' lentezza ma attesa. Per capire dove:
 
 ```bash
 cd /volume1/docker/catalogo-liebig/automazione
@@ -233,3 +238,21 @@ Un ultimo avviso: i progetti Supabase gratuiti vengono **sospesi dopo una
 settimana di inattivita'**. Finche' il job gira ogni giorno il progetto resta
 sveglio da solo; se spegni il NAS per una vacanza lunga, al ritorno potresti
 dover riattivare il progetto dal pannello prima che il sito torni a caricare.
+
+## 7. Tornare alla riserva a browser
+
+`automazione/raccolta_ebay.py` legge le pagine con Playwright ed e' conservato nel caso
+l'accesso all'API venga meno. Non funziona con l'immagine attuale, che non contiene
+Chromium. Per usarlo servono due modifiche al `Dockerfile`:
+
+```dockerfile
+FROM python:3.12-slim-bookworm
+RUN pip install --no-cache-dir "psycopg[binary]>=3.2" "playwright==1.47.0"  && playwright install --with-deps chromium
+```
+
+La base **deve** essere `bookworm` e non `python:3.12-slim`: quest'ultimo e' Debian 13
+(trixie), che Playwright 1.47 non riconosce, e la costruzione muore cercando pacchetti
+Ubuntu (`ttf-unifont`). Vanno rimessi anche `shm_size: '1gb'` nel compose, perche' i
+64 MB predefiniti di `/dev/shm` fanno morire Chromium, e un `mem_limit` piu' alto.
+
+Poi in `aggiorna.sh` si sostituisce `raccolta_ebay_api.py` con `raccolta_ebay.py`.
