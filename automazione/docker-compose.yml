@@ -1,0 +1,16 @@
+# Da lanciare dalla cartella automazione/:
+#   docker compose run --rm aggiornamento
+services:
+  aggiornamento:
+    build: .
+    image: catalogo-liebig:1
+    working_dir: /app
+    volumes:
+      # tutto il repository, cosi' il contenitore legge .env e le sorgenti
+      # e riscrive ebay_active.json e storico/ direttamente sul NAS
+      - ..:/app
+    # /dev/shm predefinito e' 64 MB: Chromium ci muore sopra
+    shm_size: '1gb'
+    # il DS218+ ha 2 GB in tutto e DSM ne vuole una parte
+    mem_limit: 1400m
+    restart: "no"

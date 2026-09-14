@@ -1,0 +1,137 @@
+# Aggiornamento giornaliero su Synology DS218+
+
+Il DS218+ (Celeron J3355, x86-64, 2 GB) regge il lavoro: Chromium headless gira,
+a patto di non fargli caricare immagini e di dargli abbastanza `/dev/shm`. Sono
+entrambe cose gia' previste in `raccolta_ebay.py` e `docker-compose.yml`.
+
+Serve **solo per il job giornaliero**. Il sito e' fatto di file statici che
+parlano direttamente con Supabase: non ha bisogno di questo contenitore, ne' di
+essere sullo stesso computer.
+
+## 1. Preparazione
+
+Su DSM 7, da Package Center, installa **Container Manager** (nelle versioni piu'
+vecchie si chiama Docker).
+
+Porta il repository sul NAS, per esempio in `/volume1/docker/catalogo-liebig`:
+via File Station da una cartella condivisa, oppure con `git clone` se hai Git.
+
+Dentro quella cartella deve esserci il file **`.env`** con le credenziali
+Supabase. Non e' nel repository (e' escluso apposta): copialo a mano dal tuo
+computer. Serve la riga `SUPABASE_DB_URL`, con il pooler:
+
+```
+SUPABASE_DB_URL=postgresql://postgres.twkhcynefhltiuwlzkqe:LA_PASSWORD@aws-0-eu-central-1.pooler.supabase.com:5432/postgres
+```
+
+Metti i permessi stretti, visto che contiene una password:
+
+```bash
+chmod 600 /volume1/docker/catalogo-liebig/.env
+```
+
+## 2. Costruzione dell'immagine
+
+Una volta sola, da SSH:
+
+```bash
+cd /volume1/docker/catalogo-liebig/automazione && /usr/local/bin/docker compose build
+```
+
+Su questo processore ci vogliono diversi minuti: scarica Chromium e le sue
+dipendenze di sistema. L'immagine occupa circa 1,5 GB.
+
+Il codice del progetto **non** entra nell'immagine, arriva dal volume montato:
+quando aggiorni il repository non devi ricostruire nulla. La ricostruzione serve
+solo se cambi le versioni di `psycopg` o `playwright` nel `Dockerfile`.
+
+## 3. Prova a mano
+
+Prima di pianificare, esegui una volta guardando cosa succede:
+
+```bash
+cd /volume1/docker/catalogo-liebig/automazione && /usr/local/bin/docker compose run --rm aggiornamento
+```
+
+Dura circa 25-30 minuti. Alla fine devi vedere le due righe di riepilogo: quante
+inserzioni sono state raccolte e quale rilevamento e' stato scritto.
+
+Per una prova piu' corta, meno pagine per query:
+
+```bash
+/usr/local/bin/docker compose run --rm aggiornamento --pagine 2 --minimo 500
+```
+
+Attenzione: con poche pagine la raccolta e' volutamente incompleta, quindi
+`build_dataset.py` la **rifiutera'** confrontandola con il rilevamento
+precedente. E' il comportamento giusto; e' anche il modo piu' semplice per
+verificare che la protezione funzioni.
+
+## 4. Pianificazione
+
+**Control Panel → Task Scheduler → Create → Scheduled Task → User-defined script**
+
+- **Utente**: `root` (serve per parlare con Docker)
+- **Pianificazione**: ogni giorno alle 07:30
+- **Comando**:
+
+```bash
+cd /volume1/docker/catalogo-liebig/automazione && /usr/local/bin/docker compose run --rm aggiornamento
+```
+
+Usa il percorso assoluto di `docker`: gli script del Task Scheduler partono con
+un `PATH` ridotto e `docker` da solo spesso non viene trovato.
+
+Non modificare `/etc/crontab` a mano: DSM lo riscrive agli aggiornamenti di
+sistema e il job sparirebbe senza preavviso.
+
+Nella scheda **Task Settings** spunta **Send run details by email** e
+**Send run details only when the script terminates abnormally**: cosi' ricevi
+un messaggio solo quando qualcosa e' andato storto, che e' esattamente quello
+che serve per un job non presidiato.
+
+## 5. Quando qualcosa va storto
+
+La catena e' costruita perche' un guasto non produca mai un catalogo sbagliato:
+
+| Cosa succede | Conseguenza |
+|---|---|
+| eBay risponde male, raccolta sotto le 3.000 inserzioni | `ebay_active.json` **non** viene sostituito, la catena si ferma, il sito resta su ieri |
+| Raccolta completata ma molto piu' magra del solito (sotto il 60 %) | `build_dataset.py` rifiuta di pubblicare e spiega di quanto e' calato |
+| Errore a meta' scrittura sul database | la transazione torna indietro, il rilevamento precedente resta corrente |
+
+Se il calo e' reale e non un guasto, si pubblica a mano:
+
+```bash
+/usr/local/bin/docker compose run --rm aggiornamento --pagine 8
+# poi, solo se sei convinto:
+/usr/local/bin/docker compose run --rm --entrypoint python aggiornamento build_dataset.py --forza
+```
+
+Per tornare a un rilevamento precedente basta spostare il flag, senza
+ricostruire niente:
+
+```sql
+update rilevamenti set corrente = false where corrente;
+update rilevamenti set corrente = true  where id = <id del rilevamento buono>;
+```
+
+## 6. Manutenzione
+
+`storico/` accumula una copia di `ebay_active.json` al giorno, circa 2,8 MB
+l'una: poco meno di 1 GB l'anno. Su un NAS non e' un problema, ma se vuoi
+tenerla corta aggiungi una riga alla fine di `aggiorna.sh`:
+
+```sh
+find /app/storico -name 'ebay_active_*.json' -mtime +90 -delete
+```
+
+Nel database le **quotazioni non vengono mai potate** (sono lo storico dei
+prezzi, il motivo per cui il catalogo sta su un database), mentre le singole
+inserzioni si conservano solo per gli ultimi 7 rilevamenti. La soglia e'
+`RILEVAMENTI_CON_INSERZIONI` in `build_dataset.py`.
+
+Un ultimo avviso: i progetti Supabase gratuiti vengono **sospesi dopo una
+settimana di inattivita'**. Finche' il job gira ogni giorno il progetto resta
+sveglio da solo; se spegni il NAS per una vacanza lunga, al ritorno potresti
+dover riattivare il progetto dal pannello prima che il sito torni a caricare.

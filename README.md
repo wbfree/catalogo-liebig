@@ -33,6 +33,13 @@ supabase/
   migrations/*.sql         schema, viste, politiche di accesso
   applica.py               applica le migrazioni non ancora applicate
 build_dataset.py           pipeline: sorgenti -> database Supabase
+automazione/
+  raccolta_ebay.py         raccolta delle inserzioni con Playwright
+  aggiorna.sh              i due passi in sequenza, per l'esecuzione pianificata
+  Dockerfile               immagine con Python, psycopg e Chromium
+  docker-compose.yml       esecuzione sul NAS
+  SYNOLOGY.md              installazione e pianificazione su Synology
+  stato.json               stato dell'ultima esecuzione della procedura pianificata
 parse_pages.py             parser di pagine eBay salvate su file
 requirements.txt           dipendenze Python
 .env                       credenziali Supabase (non versionato; vedi .env.example)
@@ -41,7 +48,6 @@ afil_rows.json             tavola di concordanza delle serie (6.544 righe)
 mlc_all.json               elenco di riferimento complementare (354 voci)
 ebay_active.json           ultimo rilevamento delle inserzioni attive (9.609 inserzioni)
 sorgenti_ritirate/         rilevamenti non più usati dalla pipeline, tenuti per ricostruzione
-automazione/stato.json     stato dell'ultima esecuzione della procedura pianificata
 DATI.md                    documentazione di ogni file di dati: contenuto, origine, ruolo
 ```
 
@@ -69,7 +75,7 @@ L'abbinamento usa una serie di espressioni regolari sui titoli delle inserzioni 
 
 ## Aggiornamento giornaliero
 
-Ogni mattina alle 07:30 (Europa/Roma) una procedura automatica rilegge le inserzioni attive su eBay.it con quattordici query, ricostruisce il dataset e scrive un nuovo rilevamento nel database. Il sito non va più ripubblicato ogni giorno: essendo i dati nel database, le pagine pubblicate cambiano solo quando cambia il codice. Il dettaglio dei passaggi è in `AGGIORNAMENTO_GIORNALIERO.md`.
+Ogni mattina alle 07:30 (Europa/Roma) una procedura automatica rilegge le inserzioni attive su eBay.it con quattordici query, ricostruisce il dataset e scrive un nuovo rilevamento nel database. La raccolta e la ricostruzione stanno in `automazione/aggiorna.sh`, pensato per girare in un contenitore su un NAS. Il sito non va più ripubblicato ogni giorno: essendo i dati nel database, le pagine pubblicate cambiano solo quando cambia il codice. Il dettaglio dei passaggi è in `AGGIORNAMENTO_GIORNALIERO.md`.
 
 Le inserzioni concluse non vengono raccolte: richiedono un accesso autenticato.
 
