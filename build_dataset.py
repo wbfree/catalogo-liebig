@@ -1,0 +1,329 @@
+#!/usr/bin/env python3
+"""Costruisce il dataset del catalogo completo delle serie Liebig (1872-1975).
+
+Input:
+  afil_rows.json  -> tabella serie (numerazione Sanguinetti / Unificato / De Magistris / CIL)
+  ebay_active.json -> inserzioni eBay.it attive rilevate via browser
+Output:
+  site/data/catalogo.json
+"""
+import json, re, statistics, unicodedata, collections, datetime, os, sys
+
+BASE = os.path.dirname(os.path.abspath(__file__))
+OUT = os.path.join(BASE, "site", "data", "catalogo.json")
+
+# ---------------------------------------------------------------- serie
+def anno_int(s):
+    m = re.findall(r"\b(18\d\d|19\d\d)", s)
+    return int(m[0]) if m else None
+
+def n_fig(titolo):
+    m = re.search(r"(\d{1,2})\s*fig", titolo, re.I)
+    return int(m.group(1)) if m else None
+
+def pulisci_titolo(t):
+    t = re.sub(r"\s*\d{1,2}\s*fig(urine)?\.?\s*(non\s+)?(numerate|numerata)?\.?\s*$", "", t, flags=re.I)
+    t = re.sub(r"\s+", " ", t).strip(" .,-")
+    return t
+
+RARE_RE = re.compile(r"\b(rarissim|molto\s+rar|assai\s+rar|rar[ao]\b|introvabil|difficil\w*\s+(da\s+)?trovar|scarsissim)", re.I)
+
+def carica_serie():
+    rows = json.load(open(os.path.join(BASE, "afil_rows.json")))
+    per_num = {}
+    for r in rows:
+        naz, sang, uni, dem, cil, anno, titolo, commento = r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7]
+        if not sang.isdigit():
+            continue
+        y = anno_int(anno)
+        num = int(sang)
+        d = per_num.setdefault(num, {"num": num, "edizioni": set(), "anno": y, "anno_raw": anno,
+                                     "titolo": "", "uni": uni, "dem": dem, "cil": cil,
+                                     "nfig": None, "nota_rarita": False})
+        d["edizioni"].add(naz)
+        if naz == "IT":
+            d["titolo"] = pulisci_titolo(titolo)
+            d["nfig"] = n_fig(titolo)
+            d["anno"] = y
+            d["anno_raw"] = anno
+            d["uni"], d["dem"], d["cil"] = uni, dem, cil
+        elif not d["titolo"]:
+            d["titolo"] = pulisci_titolo(titolo)
+            d["nfig"] = d["nfig"] or n_fig(titolo)
+        if RARE_RE.search(commento or ""):
+            d["nota_rarita"] = True
+    serie = []
+    for d in per_num.values():
+        d["it"] = "IT" in d["edizioni"]
+        d["edizioni"] = sorted(d["edizioni"])
+        if d["anno"] and not (1872 <= d["anno"] <= 1975):
+            d["anno"] = None
+        serie.append(d)
+    serie.sort(key=lambda x: x["num"])
+    return serie
+
+# ---------------------------------------------------------------- eBay
+EDIZ = [
+    (r"\bED\.?\s*ITALIA(NA)?\b|\bITALIANA\b|\bITA\b|\bIT\b", "IT"),
+    (r"\bED\.?\s*BELGI(O|A)\b|\bBELGA\b|\bBEL\b", "BL"),
+    (r"\bED\.?\s*TEDESC(A|O)\b|\bGERMANIA\b|\bTED\b", "TD"),
+    (r"\bED\.?\s*FRANCESE\b|\bFRANCIA\b|\bFRA\b", "FR"),
+    (r"\bED\.?\s*OLANDESE\b|\bOLANDA\b|\bOL\b", "OL"),
+    (r"\bFIAMMING", "FM"),
+    (r"\bSPAGNOL", "SP"),
+    (r"\bINGLESE\b", "IN"),
+]
+
+NUM_RE = [
+    re.compile(r"SANG\.?\s*(?:N\.?\s*)?(\d{1,4})", re.I),
+    # "Carabinieri - 1828 (1968)": numero di serie seguito dall'anno fra parentesi
+    re.compile(r"(\d{3,4})\s*\((?:18\d\d|19\d\d)\)"),
+    re.compile(r"S[EÉ]RIE\s*(?:N|NR|N°|N\.)?\s*[°.:]*\s*(\d{1,4})", re.I),
+    re.compile(r"\bN[°\.:]\s*(\d{1,4})", re.I),
+    # notazione compatta usata dai venditori esteri: S860, S 187, S. 1377
+    re.compile(r"(?<![A-Za-z0-9])S\.?\s?(\d{2,4})(?!\d)", re.I),
+]
+
+def prezzo(p):
+    """Estrae il prezzo minimo in EUR da stringhe tipo 'EUR 3,19 a EUR 16,49'."""
+    vals = []
+    for m in re.finditer(r"EUR\s*([\d\.]+,\d{2}|\d+)", p):
+        v = m.group(1).replace(".", "").replace(",", ".")
+        try:
+            vals.append(float(v))
+        except ValueError:
+            pass
+    return min(vals) if vals else None
+
+FILE_EBAY = ["ebay_active.json", "ebay_intl_raw.json"]
+
+def carica_ebay():
+    rows, visti = [], set()
+    for fn in FILE_EBAY:
+        p = os.path.join(BASE, fn)
+        if not os.path.exists(p):
+            continue
+        for r in json.load(open(p)):
+            if r.get("u") and r["u"] not in visti:
+                visti.add(r["u"])
+                rows.append(r)
+    out = []
+    for r in rows:
+        t = r["t"].split("\n")[0].strip()
+        pz = prezzo(r["p"]) or prezzo(r["r"])
+        if pz is None or pz <= 0:
+            continue
+        # scarta accessori / cataloghi / raccoglitori
+        if re.search(r"raccoglitor|custodi|album vuot|foglio|fogli\b|catalogo|unificato|classificator|lotto\s+\d{2,}|kg\b", t, re.I):
+            tipo = "accessorio"
+        else:
+            tipo = "serie"
+        num = None
+        for rx in NUM_RE:
+            m = rx.search(t)
+            if m:
+                n = int(m.group(1))
+                if 1 <= n <= 1871:
+                    num = n
+                    break
+        ed = None
+        for rx, code in EDIZ:
+            if re.search(rx, t):
+                ed = code
+                break
+        asta = bool(re.search(r"offert[ae]", r["r"], re.I)) and "Compralo Subito" not in r["r"]
+        # figurina sciolta vs serie completa
+        singola = bool(re.search(
+            r"\bfigurina\b|\bfig\.?\s*singol|\b1\s*(?:fig\b|figurina|quadro|chromo|card|cartoncino)"
+            r"|\bsingol|\bcartoncino\b|figurina\s*[A-F]\b|\bquadro\b", t, re.I))
+        intera = bool(re.search(
+            r"serie\s*completa|completa\s*\d|\bcompleta\b|\b(6|10|12)\s*fig|set\s*completo"
+            r"|complete\s*set|serie\s*di\s*quadri|\bquadri\b", t, re.I))
+        if intera:
+            singola = False
+        m_anno = re.search(r"\b(18[7-9]\d|19[0-7]\d)\b", t)
+        anno_ins = int(m_anno.group(1)) if m_anno else None
+        out.append({"t": t, "prezzo": round(pz, 2), "num": num, "ed": ed,
+                    "asta": asta, "url": r["u"], "tipo": tipo, "singola": singola,
+                    "anno_ins": anno_ins,
+                    "sped": bool(re.search(r"Consegna gratuita", r["r"], re.I))})
+    return out
+
+# ---------------------------------------------------------------- match per titolo
+STOP = set("""di del della delle dei degli da dal con per il lo la le i gli un una e ed in su al alla
+ai agli sul sulla nel nella fig figurine serie liebig cromo chromo cat vero estratto carne anno""".split())
+
+def tokens(s):
+    s = unicodedata.normalize("NFD", s.lower())
+    s = "".join(c for c in s if unicodedata.category(c) != "Mn")
+    return [w for w in re.findall(r"[a-z]{4,}", s) if w not in STOP]
+
+def main():
+    serie = carica_serie()
+    listings = carica_ebay()
+    print(f"serie italiane 1872-1939: {len(serie)}")
+    print(f"inserzioni eBay con prezzo: {len(listings)}")
+
+    per_serie = collections.defaultdict(list)
+    by_num = {s["num"]: s for s in serie}
+
+    idx = {}
+    for s in serie:
+        tk = tokens(s["titolo"])
+        if len(tk) >= 1:
+            idx[s["num"]] = set(tk)
+
+    def match_titolo(l):
+        lt = set(tokens(l["t"]))
+        if not lt:
+            return None
+        best, score = None, 0.0
+        for num, tk in idx.items():
+            if len(tk) < 2:
+                continue
+            inter = len(tk & lt)
+            if not inter:
+                continue
+            sc = inter / len(tk)
+            if sc > score:
+                best, score = num, sc
+        return best if (best and score >= 0.99) else None
+
+    matched_num = matched_tit = conflitti = scartati = 0
+    for l in listings:
+        if l["tipo"] != "serie":
+            continue
+        t_match = match_titolo(l)
+        num_ok = bool(l["num"]) and l["num"] in by_num
+        # controllo di coerenza sull'anno: numerazioni estranee a Sanguinetti vengono scartate
+        if (num_ok and l["anno_ins"] and by_num[l["num"]]["anno"]
+                and abs(l["anno_ins"] - by_num[l["num"]]["anno"]) > 2):
+            num_ok = False
+            scartati += 1
+        if num_ok:
+            # il titolo di catalogo ha la precedenza sul numero dichiarato dal venditore
+            if t_match and t_match != l["num"]:
+                per_serie[t_match].append(dict(l, match="titolo"))
+                conflitti += 1
+                matched_tit += 1
+            else:
+                per_serie[l["num"]].append(dict(l, match="numero"))
+                matched_num += 1
+        elif t_match:
+            per_serie[t_match].append(dict(l, match="titolo"))
+            matched_tit += 1
+    print(f"match per numero: {matched_num} | match per titolo: {matched_tit} | conflitti risolti sul titolo: {conflitti} | numeri scartati per anno incoerente: {scartati}")
+
+    # ---------------------------------------------------------- statistiche
+    tutte_ita = []
+    for s in serie:
+        ls = per_serie.get(s["num"], [])
+        # priorità: inserzioni di edizione italiana o senza edizione dichiarata
+        if s["it"]:
+            ita = [l for l in ls if l["ed"] in (None, "IT")]
+            pool_all = ita if ita else ls
+        else:
+            pool_all = ls
+        # la quotazione si basa solo su serie complete; le figurine sciolte sono contate a parte
+        pool = [l for l in pool_all if not l["singola"]] or []
+        prezzi = sorted(l["prezzo"] for l in pool)
+        s["offerte"] = len(pool)
+        s["offerte_sciolte"] = len(pool_all) - len(pool)
+        s["offerte_tot"] = len(ls)
+        s["aste"] = sum(1 for l in pool if l["asta"])
+        if prezzi:
+            s["p_min"] = prezzi[0]
+            s["p_med"] = round(statistics.median(prezzi), 2)
+            s["p_max"] = prezzi[-1]
+            s["fonte_prezzo"] = "mercato"
+            tutte_ita.append((s, s["p_med"]))
+        else:
+            s["p_min"] = s["p_med"] = s["p_max"] = None
+            s["fonte_prezzo"] = None
+        s["listings"] = sorted(pool, key=lambda l: l["prezzo"])[:8]
+        s["sciolte"] = sorted([l for l in pool_all if l["singola"]], key=lambda l: l["prezzo"])[:4]
+
+    # ---------------------------------------------------------- stima da comparabili
+    # mediana per decennio + numero di figurine, fallback decennio, fallback globale
+    globale = statistics.median([pm for _, pm in tutte_ita]) if tutte_ita else 0
+
+    def stima_comparabili(s):
+        """Mediana delle serie con mercato osservato entro una finestra temporale,
+        prima a pari numero di figurine, poi allargando."""
+        if not s["anno"]:
+            return round(globale, 2)
+        for span, samefig in ((8, True), (8, False), (15, False), (30, False)):
+            v = [pm for o, pm in tutte_ita
+                 if o["anno"] and abs(o["anno"] - s["anno"]) <= span and o["num"] != s["num"]
+                 and (not samefig or o["nfig"] == s["nfig"])]
+            if len(v) >= 6:
+                return round(statistics.median(v), 2)
+        return round(globale, 2)
+
+    for s in serie:
+        s["p_stima"] = stima_comparabili(s)
+        if s["fonte_prezzo"] == "mercato":
+            s["scost"] = round((s["p_med"] - s["p_stima"]) / s["p_stima"] * 100, 1) if s["p_stima"] else None
+        else:
+            s["p_med"] = s["p_stima"]
+            s["scost"] = None
+            s["fonte_prezzo"] = "stima"
+
+    # ---------------------------------------------------------- indice di rarità
+    # componenti: scarsità di offerta (0-55), epoca (0-25), nota di rarità (0-20)
+    max_off = max((s["offerte"] for s in serie), default=1) or 1
+    for s in serie:
+        off = s["offerte"]
+        scarsita = 55 * (1 - min(off, 8) / 8)
+        # epoca: lineare dal 1975 (0 punti) al 1872 (25 punti)
+        eta = 25 * max(0.0, min(1.0, (1975 - s["anno"]) / 103)) if s["anno"] else 12.5
+        nota = 20 if s["nota_rarita"] else 0
+        score = round(scarsita + eta + nota, 1)
+        s["rarita_score"] = score
+        del s["nota_rarita"]
+
+    # rarità RELATIVA: quintili sul punteggio composito all'interno del corpus
+    ordinate = sorted(serie, key=lambda x: x["rarita_score"])
+    n = len(ordinate)
+    etichette = [(0.20, "Comune"), (0.40, "Bassa"), (0.60, "Media"), (0.80, "Alta"), (1.01, "Estrema")]
+    for i, s in enumerate(ordinate):
+        pct = (i + 0.5) / n
+        s["percentile"] = round(pct * 100, 1)
+        for soglia, lab in etichette:
+            if pct <= soglia:
+                s["rarita"] = lab
+                break
+
+    # link di ricerca eBay preimpostato per serie
+    import urllib.parse as up
+    for s in serie:
+        q = f"liebig {s['num']} {s['titolo']}"
+        s["ebay_q"] = "https://www.ebay.it/sch/i.html?_nkw=" + up.quote_plus(f"liebig sang {s['num']}")
+        s["ebay_q2"] = "https://www.ebay.it/sch/i.html?_nkw=" + up.quote_plus(f"liebig {s['titolo'][:40]}")
+
+    # fasce di prezzo
+    for s in serie:
+        p = s["p_med"] or 0
+        s["fascia"] = ("0-5" if p < 5 else "5-15" if p < 15 else "15-40" if p < 40 else
+                       "40-100" if p < 100 else "100+")
+
+    meta = {
+        "aggiornato": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+        "n_serie": len(serie),
+        "n_serie_it": sum(1 for s in serie if s["it"]),
+        "anno_min": min(s["anno"] for s in serie if s["anno"]),
+        "anno_max": max(s["anno"] for s in serie if s["anno"]),
+        "n_inserzioni": len(listings),
+        "n_inserzioni_abbinate": sum(len(v) for v in per_serie.values()),
+        "serie_con_mercato": sum(1 for s in serie if s["offerte"] > 0),
+        "mediana_globale": round(globale, 2),
+    }
+    os.makedirs(os.path.dirname(OUT), exist_ok=True)
+    json.dump({"meta": meta, "serie": serie}, open(OUT, "w"), ensure_ascii=False)
+    print(json.dumps(meta, indent=2, ensure_ascii=False))
+    print("scritto", OUT)
+    print(collections.Counter(s["rarita"] for s in serie))
+    print(collections.Counter(s["fascia"] for s in serie))
+
+if __name__ == "__main__":
+    main()

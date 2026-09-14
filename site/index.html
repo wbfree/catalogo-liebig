@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catalogo Liebig · tutte le serie 1872–1975</title>
+<meta name="description" content="Catalogo digitale interattivo di tutte le 1.871 serie di figurine Liebig emesse dal 1872 al 1975: numerazione Sanguinetti, edizioni linguistiche, prezzi di mercato reali e rarità relativa.">
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=gambetta@400,500,600&f[]=switzer@400,500,600,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23f7f1e6'/%3E%3Cpath d='M9 10h14v3l-2 11H11L9 13z' fill='none' stroke='%238c1c22' stroke-width='2.2'/%3E%3Cpath d='M12 7h8' stroke='%238c1c22' stroke-width='2.2'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="#catalogo" aria-label="Catalogo Liebig Italia">
+      <svg class="mark" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+        <rect x="1" y="1" width="42" height="42" rx="3" stroke="currentColor" stroke-width="1.4" opacity=".35"/>
+        <path d="M13 15h18l-2.5 15h-13L13 15z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M17 10.5h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="M17.5 21.5h9" stroke="currentColor" stroke-width="1.4" opacity=".6"/>
+      </svg>
+      <span class="brand-txt">
+        <b>Catalogo Liebig</b>
+        <i>tutte le serie 1872 – 1975 · numerazione Sanguinetti</i>
+      </span>
+    </a>
+    <nav class="tabs" role="tablist">
+      <button class="tab is-on" data-view="catalogo" role="tab">Catalogo</button>
+      <button class="tab" data-view="monitoraggio" role="tab">Monitoraggio eBay</button>
+      <button class="tab" data-view="metodo" role="tab">Metodo e fonti</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============================ CATALOGO ============================ -->
+  <section id="view-catalogo" class="view">
+
+    <p class="stamp" id="stamp"></p>
+    <div class="kpis" id="kpis"></div>
+
+    <div class="panel filters">
+      <div class="f-row">
+        <div class="field grow">
+          <label for="q">Ricerca libera</label>
+          <input id="q" type="search" placeholder="Titolo, numero Sanguinetti, anno…" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="sort">Ordina per</label>
+          <select id="sort">
+            <option value="num">Numero Sanguinetti ↑</option>
+            <option value="-p_med">Quotazione ↓</option>
+            <option value="p_med">Quotazione ↑</option>
+            <option value="-rarita_score">Rarità relativa ↓</option>
+            <option value="anno">Anno ↑</option>
+            <option value="-anno">Anno ↓</option>
+            <option value="-offerte">Offerte attive ↓</option>
+            <option value="-scost">Scostamento dal comparabile ↓</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="f-row">
+        <div class="field">
+          <label>Fascia di prezzo (mediana, €)</label>
+          <div class="chips" id="bands">
+            <button class="chip" data-band="0-5">0–5</button>
+            <button class="chip" data-band="5-15">5–15</button>
+            <button class="chip" data-band="15-40">15–40</button>
+            <button class="chip" data-band="40-100">40–100</button>
+            <button class="chip" data-band="100+">100+</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Intervallo personalizzato (€)</label>
+          <div class="pair">
+            <input id="pmin" type="number" min="0" step="1" placeholder="min">
+            <span class="dash">–</span>
+            <input id="pmax" type="number" min="0" step="1" placeholder="max">
+          </div>
+        </div>
+        <div class="field">
+          <label>Rarità relativa</label>
+          <div class="chips" id="rars">
+            <button class="chip" data-rar="Comune">Comune</button>
+            <button class="chip" data-rar="Bassa">Bassa</button>
+            <button class="chip" data-rar="Media">Media</button>
+            <button class="chip" data-rar="Alta">Alta</button>
+            <button class="chip" data-rar="Estrema">Estrema</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="f-row">
+        <div class="field grow">
+          <label>Anno di emissione: <span class="mono" id="yrlab">1872 – 1975</span></label>
+          <div class="range2">
+            <input id="y1" type="range" min="1872" max="1975" value="1872">
+            <input id="y2" type="range" min="1872" max="1975" value="1975">
+          </div>
+        </div>
+        <div class="field">
+          <label>Edizione</label>
+          <div class="chips" id="eds">
+            <button class="chip" data-ed="it">Con edizione italiana</button>
+            <button class="chip" data-ed="noit">Senza edizione italiana</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Dato di prezzo</label>
+          <div class="chips" id="srcs">
+            <button class="chip" data-src="mercato">Mercato osservato</button>
+            <button class="chip" data-src="stima">Stima comparabili</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <div class="chips">
+            <button class="chip" id="onlyAuct">Solo con asta in corso</button>
+            <button class="chip ghost" id="reset">Azzera filtri</button>
+          </div>
+        </div>
+      </div>
+
+      <p class="count" id="count"></p>
+    </div>
+
+    <div class="panel tablewrap">
+      <table class="grid" id="tbl">
+        <thead>
+          <tr>
+            <th class="num">Sang.</th>
+            <th>Titolo della serie</th>
+            <th class="num">Anno</th>
+            <th class="num">Fig.</th>
+            <th class="num">Quotazione</th>
+            <th class="num">Min – Max</th>
+            <th class="num">Offerte</th>
+            <th>Rarità relativa</th>
+            <th class="num">Scost.</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="more"><button id="more" class="btn">Mostra altre 200 serie</button></div>
+    </div>
+  </section>
+
+  <!-- ========================= MONITORAGGIO ========================= -->
+  <section id="view-monitoraggio" class="view" hidden>
+    <div class="panel">
+      <h2 class="h-sec">Confronto quotazione stimata / prezzo di mercato reale</h2>
+      <p class="lead">Per ogni serie con almeno un'inserzione attiva su eBay.it la mediana dei prezzi richiesti viene
+        confrontata con la stima da comparabili (mediana delle serie emesse entro otto anni e con lo stesso numero di
+        figurine). Lo scostamento identifica le serie che il mercato paga sopra o sotto il livello atteso. Il numero di
+        offerte è indicato per ogni riga: con una sola inserzione lo scostamento va letto come segnale, non come prezzo
+        consolidato.</p>
+      <div class="two">
+        <div>
+          <h3 class="h-min">Mercato sopra la stima <span class="hint">premio da domanda / rarità</span></h3>
+          <ol class="rank" id="rankUp"></ol>
+        </div>
+        <div>
+          <h3 class="h-min">Mercato sotto la stima <span class="hint">possibili occasioni d'acquisto</span></h3>
+          <ol class="rank" id="rankDown"></ol>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2 class="h-sec">Aste in corso rilevate</h2>
+      <p class="lead" id="auctLead"></p>
+      <div class="tablewrap">
+        <table class="grid" id="tblAuct">
+          <thead><tr><th class="num">Sang.</th><th>Inserzione</th><th class="num">Prezzo</th><th class="num">Mediana serie</th><th></th></tr></thead>
+          <tbody id="auctBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2 class="h-sec">Struttura del mercato</h2>
+      <div class="two">
+        <div class="chartbox"><canvas id="chDec"></canvas></div>
+        <div class="chartbox"><canvas id="chBand"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ METODO ============================ -->
+  <section id="view-metodo" class="view" hidden>
+    <div class="panel prose">
+      <h2 class="h-sec">Come è costruito questo catalogo</h2>
+
+      <h3 class="h-min">1. Elenco delle serie e numerazione</h3>
+      <p>Il perimetro copre <b>tutte le 1.871 serie Liebig emesse dal 1872 al 1975</b>, in qualunque edizione
+        linguistica, secondo la numerazione del <b>catalogo Sanguinetti</b>, lo standard usato dai collezionisti
+        europei da oltre un secolo
+        (<a href="https://www.filateliasanguinetti.it/en/buy-liebig-cards-guide-and-price-list" target="_blank" rel="noopener">Sanguinetti sas</a>).
+        Numeri Sanguinetti, numeri di conversione (Unificato, De Magistris, CIL), anno di emissione, titolo italiano e
+        numero di figurine provengono dalla tabella di concordanza pubblicata da
+        <a href="https://antichefigurineitalianeliebig.com/serie-liebig-1" target="_blank" rel="noopener">Antiche Figurine Italiane &amp; Liebig</a>,
+        che cataloga 6.544 righe serie/edizione su tutte le lingue: 1.305 serie hanno un'edizione italiana, le altre
+        sono uscite solo in edizione belga, tedesca, francese, olandese, fiamminga, spagnola, inglese, svizzera,
+        svedese, danese, boema, ungherese o russa. Per le serie senza edizione italiana il titolo riportato è quello
+        della prima edizione disponibile in tabella. Il filtro <b>Edizione</b> permette di isolare l'uno o l'altro
+        insieme. Il contesto storico della raccolta italiana — prima
+        serie in lingua italiana, la n° 65 del 1878 — è documentato da
+        <a href="https://it.wikipedia.org/wiki/Figurine_Liebig" target="_blank" rel="noopener">Wikipedia</a> e
+        <a href="https://www.my-liebig-collection.it/history_2.asp" target="_blank" rel="noopener">My Liebig Collection</a>.</p>
+
+      <h3 class="h-min">2. Perché non ci sono le quotazioni ufficiali Sanguinetti</h3>
+      <p>Il <i>Listino Prezzi Figurine e Menù Liebig</i> — 50 pagine, oltre 6.000 quotazioni per edizione — è un
+        fascicolo cartaceo a pagamento e <b>non è pubblicato online</b>
+        (<a href="https://www.filateliasanguinetti.it/en/liebig-tradecards-pricelist" target="_blank" rel="noopener">listino ufficiale</a>).
+        Le quotazioni di questo catalogo sono quindi <b>prezzi di mercato reali</b>, non valori di listino. Se disponi
+        del fascicolo, le quotazioni ufficiali possono essere importate in una colonna aggiuntiva.</p>
+
+      <h3 class="h-min">3. Prezzi di mercato</h3>
+      <p>Le inserzioni <b>attive</b> su eBay.it vengono lette direttamente dalle pagine di ricerca con quattordici
+        chiavi diverse — sei in italiano (<span class="mono">figurine liebig</span>, <span class="mono">liebig
+        serie</span>, <span class="mono">liebig chromo</span>, <span class="mono">liebig cromolitografia</span>,
+        <span class="mono">figurine liebig serie completa</span>, <span class="mono">serie liebig italiana</span>) e
+        otto rivolte al mercato estero (<span class="mono">liebig sammelbilder serie</span>,
+        <span class="mono">liebig chromos serie complete</span>, <span class="mono">liebig trade cards set</span>,
+        <span class="mono">liebig bilderserie</span> e altre) — e deduplicate per codice inserzione. L'abbinamento
+        alla serie avviene in due passaggi: prima per numero Sanguinetti dichiarato nel titolo
+        (<span class="mono">SANG. 729</span>, <span class="mono">Serie N° 335</span>, <span class="mono">N.1123</span>,
+        <span class="mono">série n°710</span>, <span class="mono">S1377</span>,
+        <span class="mono">Carabinieri - 1828 (1968)</span>), poi per corrispondenza integrale del titolo di
+        catalogo. Un controllo di coerenza scarta il numero quando l'anno indicato nell'inserzione dista più di due
+        anni da quello di catalogo. Cataloghi,
+        raccoglitori, fogli e lotti misti vengono esclusi. Per ogni serie si privilegiano le inserzioni di edizione
+        italiana o senza edizione dichiarata (per le serie mai uscite in italiano si usano tutte le edizioni); la <b>quotazione</b> è la mediana dei prezzi richiesti delle sole
+        <b>serie complete</b>, insieme a minimo e massimo. Le figurine sciolte sono contate a parte (colonna offerte,
+        indicatore <span class="mono">+n f</span>) e non entrano nel calcolo. Quando il numero dichiarato dal venditore
+        contraddice il titolo di catalogo, prevale il titolo: alcuni venditori usano numerazioni diverse da quella
+        Sanguinetti, ed è la principale fonte residua di rumore negli abbinamenti.</p>
+      <p class="warn">I prezzi richiesti non sono prezzi realizzati. Le inserzioni concluse con vendita su eBay
+        richiedono l'accesso all'account e non sono state incluse: la mediana va letta come livello dell'offerta, non
+        come prezzo di aggiudicazione.</p>
+
+      <h3 class="h-min">4. Stima da comparabili</h3>
+      <p>Per le serie senza inserzioni attive la quotazione è stimata con la mediana delle serie comparabili: emesse
+        entro ± 8 anni e con lo stesso numero di figurine (minimo 6 osservazioni), con allargamento progressivo della
+        finestra a ± 8, ± 15 e ± 30 anni senza vincolo sulle figurine e infine ripiego sulla mediana generale.
+        La stessa stima è il termine di confronto per lo scostamento. Queste righe sono marcate <span class="tag tag-st">stima</span> e non vanno confuse con i dati
+        osservati.</p>
+
+      <h3 class="h-min">5. Indice di rarità relativa</h3>
+      <p>Punteggio composito, poi convertito in <b>quintili sul corpus</b> (ogni classe contiene circa un quinto delle
+        serie), così che la rarità sia effettivamente relativa e non assoluta:</p>
+      <ul>
+        <li><b>Scarsità di offerta</b> (fino a 55 punti) — inverso del numero di inserzioni attive abbinate, saturato a 8.</li>
+        <li><b>Epoca</b> (fino a 25 punti) — le emissioni più antiche, con tirature minori e sopravvivenza inferiore, pesano più.</li>
+        <li><b>Segnalazione di rarità</b> (20 punti) — la serie è descritta come rara, rarissima o introvabile nelle note
+          di catalogazione della raccolta di riferimento.</li>
+      </ul>
+
+      <h3 class="h-min">6. Aggiornamento</h3>
+      <p>Un'attività pianificata rilegge ogni giorno le inserzioni attive, ricostruisce i prezzi e ripubblica il
+        catalogo a questo stesso indirizzo. La data dell'ultimo rilevamento è indicata in testa alla pagina.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot wrap">
+  <p>Catalogo costruito su dati pubblici. Numerazione Sanguinetti; prezzi rilevati da eBay.it. Nessuna affiliazione con
+    Sanguinetti sas o eBay.</p>
+</footer>
+
+<!-- ============================ DETTAGLIO ============================ -->
+<div class="drawer" id="drawer" hidden>
+  <div class="drawer-bg" data-close></div>
+  <aside class="drawer-in" role="dialog" aria-modal="true" aria-labelledby="dTitle">
+    <button class="x" data-close aria-label="Chiudi">✕</button>
+    <div id="dBody"></div>
+  </aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
