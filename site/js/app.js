@@ -607,4 +607,16 @@
       }
     });
   }
+  /* Interfaccia minima per il riconoscimento da foto (js/ocr.js), che vive
+     fuori da questa chiusura e ha bisogno del catalogo gia' caricato. */
+  window.LIEBIG = {
+    serie: () => SERIE,
+    apriSerie: n => openDrawer(n),
+    cerca: t => {
+      $('#q').value = t;
+      state.q = String(t).trim().toLowerCase();
+      state.limit = 200;
+      apply();
+    }
+  };
 })();

@@ -58,7 +58,18 @@
            piu' spesso, e su telefono restava sepolto sotto i filtri chiusi -->
       <div class="field grow f-cerca">
         <label for="q">Ricerca libera</label>
-        <input id="q" type="search" placeholder="Titolo, numero Sanguinetti, anno…" autocomplete="off">
+        <div class="f-cerca-riga">
+          <input id="q" type="search" placeholder="Titolo, numero Sanguinetti, anno…" autocomplete="off">
+          <button class="btn foto" id="btnFoto" type="button"
+                  title="Inquadra il titolo stampato sulla figurina"
+                  aria-label="Riconosci il titolo da una foto">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
+              <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.1-1.8A1 1 0 0 1 8.7 4.7h6.6a1 1 0 0 1 .9.5L17.3 7h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"
+                    stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+              <circle cx="12" cy="12.8" r="3.4" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
      <details class="f-acc" id="fAcc" open>
@@ -339,6 +350,19 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- ======================== RICONOSCIMENTO DA FOTO ======================== -->
+<div class="drawer ocr" id="ocr" hidden>
+  <div class="drawer-bg" data-ocr-chiudi></div>
+  <aside class="drawer-in" role="dialog" aria-modal="true" aria-labelledby="ocrTitolo">
+    <div class="d-testa">
+      <button class="x" data-ocr-chiudi aria-label="Chiudi">✕</button>
+      <span class="d-testa-ttl" id="ocrTitolo">Riconosci la serie da una foto</span>
+    </div>
+    <div id="ocrCorpo"></div>
+  </aside>
+</div>
+<input type="file" id="ocrFile" accept="image/*" capture="environment" hidden>
+
 <script>
   /* Il service worker rende l'applicazione installabile e apribile senza rete.
      Richiede HTTPS: su http:// il browser lo ignora, tranne che su localhost. */
@@ -350,5 +374,6 @@
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/app.js"></script>
+<script src="js/ocr.js"></script>
 </body>
 </html>

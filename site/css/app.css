@@ -464,3 +464,65 @@ body.bloccato{overflow:hidden}
   .f-cerca{margin-bottom:var(--space-2)}
   .f-cerca input{min-height:44px; font-size:16px}  /* 16px: sotto, iOS ingrandisce la pagina */
 }
+
+/* ==========================================================================
+   Riconoscimento della serie da una foto
+   ========================================================================== */
+.f-cerca-riga{display:flex; gap:var(--space-2); align-items:stretch}
+.f-cerca-riga input{flex:1}
+.btn.foto{
+  flex:0 0 auto; width:44px; padding:0; display:flex; align-items:center; justify-content:center;
+  background:var(--paper); color:var(--ink-2); border:1px solid var(--line);
+}
+.btn.foto:hover{background:var(--oxblood); color:#fff; border-color:var(--oxblood)}
+
+.ocr-guida{font-size:var(--text-sm); color:var(--ink-2); margin:0 0 var(--space-4)}
+.ocr-letto{
+  font-size:var(--text-sm); margin:0 0 var(--space-4); padding:var(--space-3) var(--space-4);
+  background:var(--paper); border:1px solid var(--line-2); border-radius:var(--radius);
+  overflow-wrap:anywhere;
+}
+
+/* la foto con la fascia da allineare al titolo */
+.ocr-tela{position:relative; line-height:0; border-radius:var(--radius); overflow:hidden; background:var(--ink)}
+.ocr-tela img{width:100%; height:auto; display:block}
+.ocr-ombra{position:absolute; left:0; right:0; background:rgba(36,31,26,.62); pointer-events:none}
+.ocr-banda{
+  position:absolute; left:0; right:0; cursor:grab; touch-action:none;
+  border:2px solid var(--oxblood-2); box-shadow:0 0 0 1px rgba(255,255,255,.5) inset;
+}
+.ocr-banda:active{cursor:grabbing}
+.ocr-maniglia{
+  position:absolute; left:50%; transform:translateX(-50%); width:72px; height:20px;
+  background:var(--oxblood-2); border-radius:10px; cursor:ns-resize; touch-action:none;
+}
+.ocr-maniglia::after{content:''; position:absolute; inset:8px 26px; border-top:2px solid rgba(255,255,255,.75)}
+.ocr-maniglia.alto{top:-11px}
+.ocr-maniglia.basso{bottom:-11px}
+
+.ocr-azioni{display:flex; gap:var(--space-2); flex-wrap:wrap; margin-top:var(--space-4)}
+.ocr-azioni .btn{flex:1 1 auto}
+
+.ocr-esiti{list-style:none; margin:0; padding:0}
+.ocr-esiti li{margin-bottom:var(--space-2)}
+.ocr-esiti button{
+  width:100%; display:flex; align-items:center; gap:var(--space-4); text-align:left;
+  font:inherit; cursor:pointer; padding:var(--space-3) var(--space-4);
+  background:var(--paper-2); border:1px solid var(--line); border-radius:var(--radius);
+}
+.ocr-esiti button:hover{border-color:var(--oxblood-2); background:rgba(140,28,34,.04)}
+.ocr-pct{
+  flex:0 0 auto; min-width:48px; text-align:center; font-variant-numeric:tabular-nums;
+  font-weight:600; font-size:var(--text-sm); color:var(--ink-3);
+  padding:var(--space-1) var(--space-2); border-radius:999px; background:var(--paper);
+  border:1px solid var(--line-2);
+}
+.ocr-pct.ok{background:var(--oxblood); border-color:var(--oxblood); color:#fff}
+.ocr-nome{display:flex; flex-direction:column; min-width:0}
+.ocr-nome b{font-weight:500; overflow-wrap:anywhere}
+.ocr-nome i{font-style:normal; font-size:var(--text-xs); color:var(--ink-3); margin-top:2px}
+
+@media (max-width:640px){
+  .ocr-azioni{flex-direction:column}
+  .ocr-azioni .btn{width:100%}
+}

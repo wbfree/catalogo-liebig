@@ -17,6 +17,9 @@ Sito pubblico: **https://liebig.pplx.app**
   solo inventario, e chi raggiunge l'indirizzo del sito può modificarlo.
 - **Storico delle quotazioni**: ogni rilevamento resta in archivio, e la scheda di una
   serie mostra l'andamento del prezzo mediano nel tempo.
+- **Riconoscimento da foto**: si fotografa il cartiglio con il titolo stampato sulla
+  figurina, si allinea la fascia di inquadratura e il catalogo propone le serie piu'
+  somiglianti. Il riconoscimento avviene sul telefono, la foto non esce di li'.
 - **Installabile sul telefono**: si aggiunge alla schermata iniziale, si apre a schermo
   intero e resta consultabile anche senza rete, mostrando l'ultimo catalogo scaricato. Le
   modifiche alla collezione fatte offline partono da sole quando torna il collegamento.
@@ -33,6 +36,7 @@ site/                      applicazione statica: legge i dati da Supabase, nessu
   css/app.css
   js/config.js             indirizzo del progetto Supabase e chiave pubblica anon
   js/db.js                 client PostgREST minimo
+  js/ocr.js                riconoscimento della serie da una foto
   js/app.js
   version.txt              marcatore dell'ultima pubblicazione del sito
 supabase/
