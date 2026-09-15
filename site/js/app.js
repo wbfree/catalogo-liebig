@@ -221,6 +221,36 @@
     $$('#eds .chip').forEach(b => b.addEventListener('click', () => toggle(b, state.eds, b.dataset.ed)));
     $$('#owns .chip').forEach(b => b.addEventListener('click', () => toggle(b, state.owns, b.dataset.own)));
 
+    /* Tema. «automatico» segue l'impostazione del sistema, le altre due la
+       forzano. La scelta sta nel browser e non nel database: e' una preferenza
+       del dispositivo, non del catalogo, e sul telefono puo' ragionevolmente
+       essere diversa da quella del computer. */
+    const TEMI = ['automatico', 'chiaro', 'scuro'];
+    const sistemaScuro = matchMedia('(prefers-color-scheme: dark)');
+    let tema = 'automatico';
+    try { tema = localStorage.getItem('liebig-tema') || 'automatico'; } catch (e) {}
+
+    function applicaTema(ridisegna) {
+      const scuro = tema === 'scuro' || (tema === 'automatico' && sistemaScuro.matches);
+      document.documentElement.dataset.tema = scuro ? 'scuro' : 'chiaro';
+      $('#temaColore').content = scuro ? '#16181b' : '#f6f1e7';
+      $('#tema').textContent = 'Tema: ' + tema;
+      // i colori dei grafici sono passati a Chart.js a mano: vanno rifatti
+      if (ridisegna && SERIE.length) charts();
+    }
+    applicaTema(false);
+
+    $('#tema').addEventListener('click', () => {
+      tema = TEMI[(TEMI.indexOf(tema) + 1) % TEMI.length];
+      try {
+        if (tema === 'automatico') localStorage.removeItem('liebig-tema');
+        else localStorage.setItem('liebig-tema', tema);
+      } catch (e) {}
+      applicaTema(true);
+      apriMenu(false);
+    });
+    sistemaScuro.addEventListener('change', () => { if (tema === 'automatico') applicaTema(true); });
+
     $('#collExport').addEventListener('click', () => { collExport(); apriMenu(false); });
     $('#collImportBtn').addEventListener('click', () => { $('#collImport').click(); apriMenu(false); });
     $('#collImport').addEventListener('change', e => { if (e.target.files[0]) collImport(e.target.files[0]); e.target.value = ''; });
@@ -354,9 +384,7 @@
             aria-label="Serie ${s.num} in mio possesso" title="Serie in mio possesso"></td>
         <td class="num"><span class="n">${s.num}</span></td>
         <td><span class="ttl">${esc(s.titolo)}</span>
-            <span class="sub">${mk ? `<span class="tag tag-mk">mercato</span>` : `<span class="tag tag-st">stima</span>`}
-            ${s.aste ? `<span class="tag tag-au">asta</span>` : ''}
-            ${s.it ? '' : '<span class="tag tag-ed">no ed. IT</span> '}Unificato ${esc(s.uni || '—')} · De Magistris ${esc(s.dem || '—')}</span>${coll}</td>
+            <span class="sub">${mk ? `<span class="tag tag-mk">mercato</span>` : `<span class="tag tag-st">stima</span>`}${s.aste ? `<span class="tag tag-au">asta</span>` : ''}${s.it ? '' : '<span class="tag tag-ed">no ed. IT</span>'}</span>${coll}</td>
         <td class="num">${s.anno ?? '<span class="nil">—</span>'}</td>
         <td class="num">${s.nfig ?? '—'}</td>
         <td class="num price">${eur(s.p_med)}</td>
@@ -537,14 +565,14 @@
         labels: righe.map(r => new Date(r.data).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })),
         datasets: [{
           data: righe.map(r => Number(r.p_med)),
-          borderColor: '#8c1c22', backgroundColor: 'rgba(140,28,34,.08)',
+          borderColor: colore('--oxblood'), backgroundColor: colore('--riga-hover'),
           borderWidth: 2, pointRadius: 2, tension: .25, fill: true
         }]
       },
       options: {
         maintainAspectRatio: false, plugins: { legend: { display: false },
           tooltip: { callbacks: { label: c => eur(c.parsed.y) + ' · ' + righe[c.dataIndex].offerte + ' offerte' } } },
-        scales: { y: { grid: { color: '#ebe2d1' }, ticks: { callback: v => '€' + v } }, x: { grid: { display: false } } }
+        scales: { y: { grid: { color: colore('--griglia') }, ticks: { callback: v => '€' + v } }, x: { grid: { display: false } } }
       }
     });
   }
@@ -602,10 +630,20 @@
       </tr>`).join('') : `<tr><td colspan="5" class="empty" style="padding:var(--space-6)">Nessuna asta rilevata.</td></tr>`;
   }
 
+  /* I grafici non leggono il CSS: i colori vanno passati a mano, quindi si
+     prendono dalle stesse variabili del tema. Cosi' cambiando tema cambiano
+     anche loro, invece di restare due macchie chiare su fondo scuro. */
+  function colore(nome) {
+    return getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
+  }
+
   function charts() {
+    // ripetibile: al cambio di tema si ridisegna, e Chart.js rifiuta un canvas
+    // che risulta ancora occupato da un grafico precedente
+    ['#chDec', '#chBand'].forEach(sel => { const c = Chart.getChart($(sel)); if (c) c.destroy(); });
     const font = { family: 'Switzer, sans-serif', size: 12 };
     Chart.defaults.font = font;
-    Chart.defaults.color = '#5d5449';
+    Chart.defaults.color = colore('--ink-2');
 
     const decs = {};
     SERIE.filter(s => s.fonte_prezzo === 'mercato' && s.anno).forEach(s => {
@@ -619,12 +657,12 @@
         labels: keys.map(k => k + 's'),
         datasets: [{
           label: 'Mediana di mercato (€)', data: keys.map(k => median(decs[k])),
-          backgroundColor: '#8c1c22', borderRadius: 2, maxBarThickness: 46
+          backgroundColor: colore('--oxblood'), borderRadius: 2, maxBarThickness: 46
         }]
       },
       options: {
         maintainAspectRatio: false, plugins: { legend: { display: false }, title: { display: true, text: 'Mediana di mercato per decennio di emissione', font: { size: 13, weight: '600' }, padding: { bottom: 12 } } },
-        scales: { y: { grid: { color: '#ebe2d1' }, ticks: { callback: v => '€' + v } }, x: { grid: { display: false } } }
+        scales: { y: { grid: { color: colore('--griglia') }, ticks: { callback: v => '€' + v } }, x: { grid: { display: false } } }
       }
     });
 
@@ -634,13 +672,14 @@
       type: 'bar',
       data: {
         labels: order.map(b => '€ ' + b), datasets: [{
-          data: cnt, backgroundColor: ['#c2b9a8', '#9ab08f', '#d7b25a', '#d0743c', '#8c1c22'], borderRadius: 2, maxBarThickness: 46
+          data: cnt, borderRadius: 2, maxBarThickness: 46,
+          backgroundColor: ['--d-comune', '--d-bassa', '--d-media', '--d-alta', '--oxblood'].map(colore)
         }]
       },
       options: {
         indexAxis: 'y', maintainAspectRatio: false,
         plugins: { legend: { display: false }, title: { display: true, text: 'Serie per fascia di prezzo', font: { size: 13, weight: '600' }, padding: { bottom: 12 } } },
-        scales: { x: { grid: { color: '#ebe2d1' } }, y: { grid: { display: false } } }
+        scales: { x: { grid: { color: colore('--griglia') } }, y: { grid: { display: false } } }
       }
     });
   }

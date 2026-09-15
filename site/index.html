@@ -3,6 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+  /* Il tema si decide prima che la pagina si disegni: se questo girasse dopo,
+     a ogni apertura si vedrebbe un lampo di pagina chiara prima di quella
+     scura. Vale la scelta salvata; se non c'e', l'impostazione del sistema. */
+  (function () {
+    var scelta = null;
+    try { scelta = localStorage.getItem('liebig-tema'); } catch (e) {}
+    if (scelta === 'scuro' || (!scelta && matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.dataset.tema = 'scuro';
+    }
+  })();
+</script>
 <title>Catalogo Liebig · tutte le serie 1872–1975</title>
 <meta name="description" content="Catalogo digitale interattivo di tutte le 1.871 serie di figurine Liebig emesse dal 1872 al 1975: numerazione Sanguinetti, edizioni linguistiche, prezzi di mercato reali e rarità relativa.">
 <link rel="preconnect" href="https://api.fontshare.com">
@@ -14,7 +26,7 @@
      dei tipi MIME di Apache e nginx, e il manifest arrivava senza Content-Type,
      cosi' Chrome non offriva l'installazione -->
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#f6f1e7">
+<meta name="theme-color" content="#f6f1e7" id="temaColore">
 <link rel="apple-touch-icon" href="icone/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -53,6 +65,8 @@
         <button class="menu-az" id="collExport" type="button">Esporta la collezione</button>
         <button class="menu-az" id="collImportBtn" type="button">Importa da file</button>
         <input type="file" id="collImport" accept="application/json,.json" hidden>
+        <hr class="menu-sep">
+        <button class="menu-az" id="tema" type="button">Tema: automatico</button>
       </div>
     </nav>
   </div>

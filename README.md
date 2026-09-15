@@ -23,6 +23,8 @@ Sito pubblico: **https://liebig.pplx.app**
 - **Installabile sul telefono**: si aggiunge alla schermata iniziale, si apre a schermo
   intero e resta consultabile anche senza rete, mostrando l'ultimo catalogo scaricato. Le
   modifiche alla collezione fatte offline partono da sole quando torna il collegamento.
+- **Tema chiaro o scuro**: nel menu in alto a destra, con «automatico» che segue
+  l'impostazione del sistema. La scelta resta sul dispositivo, non nel database.
 - **Filtri** per fascia di prezzo, intervallo personalizzato, anno, rarità, edizione italiana, tipo di dato di prezzo e presenza di aste in corso.
 
 ## Struttura
@@ -30,7 +32,7 @@ Sito pubblico: **https://liebig.pplx.app**
 ```
 site/                      applicazione statica: legge i dati da Supabase, nessun backend proprio
   index.html
-  manifest.webmanifest     descrittore dell'applicazione installabile
+  manifest.json            descrittore dell'applicazione installabile
   sw.js                    service worker: guscio in cache e catalogo leggibile offline
   icone/                   icone dell'applicazione, generate da automazione/genera_icone.py
   css/app.css

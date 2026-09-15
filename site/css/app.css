@@ -28,6 +28,68 @@
 
   --font-display:'Gambetta','Iowan Old Style',serif;
   --font-body:'Switzer','Helvetica Neue',sans-serif;
+
+  /* Colori derivati. Stanno qui, e non sparsi nelle regole, perche' il tema
+     scuro li rimappa tutti in un punto solo: ogni tinta scritta a mano dentro
+     una regola sarebbe una macchia chiara al buio. */
+  --topbar:rgba(246,241,231,.93);
+  --trama:rgba(140,28,34,.035);
+  --riga-alt:rgba(221,210,189,.16);
+  --riga-hover:rgba(140,28,34,.07);
+  --riga-mia:rgba(154,123,47,.07);
+  --sel-bg:#241f1a;              /* testata della tabella, voce di menu attiva */
+  --sel-tx:#fffdf8;
+  --su-pieno:#fff;               /* testo sopra un fondo pieno oxblood */
+  --velo:rgba(36,31,26,.42);     /* sfondo dietro la scheda */
+  --griglia:#ebe2d1;             /* linee dei grafici */
+  --st-bg:#f6eed8; --st-bd:#cdbd95; --st-tx:#77601f;
+  --mk-bg:#eaf3ee; --mk-bd:#a9c4b3; --mk-tx:#2f6b4f;
+  --au-bg:#fbeceb; --au-bd:#b03a34; --au-tx:#8c1c22;
+  --ed-bg:#eef2f6; --ed-bd:#b9c4ce; --ed-tx:#4a5a68;
+  --avviso-bg:#fdf3e3; --avviso-bd:#e3cfa5; --avviso-tx:#6b5220;
+  --loc-bg:#fbf6ea; --loc-bd:#e0d3b4;
+  --d-comune:#c2b9a8; --d-bassa:#9ab08f; --d-media:#d7b25a; --d-alta:#d0743c;
+  --ombra-ocr:rgba(36,31,26,.66);
+}
+
+/* --------------------------------------------------------------- tema scuro
+   Un attributo solo sulla radice, scritto da uno script in testa al documento
+   prima che la pagina si disegni: senza quello si vedrebbe un lampo chiaro a
+   ogni caricamento. Il valore arriva dalla scelta salvata, e in mancanza di
+   scelta dall'impostazione del sistema. */
+:root[data-tema="scuro"]{
+  --paper:#16181b;
+  --paper-2:#1e2126;
+  --line:#343a42;
+  --line-2:#2a2f36;
+  --ink:#ece7de;
+  --ink-2:#b5aea4;
+  --ink-3:#8b8479;
+  --oxblood:#d05a55;
+  --oxblood-2:#e07a6f;
+  --gold:#c8862f;
+  --green:#5fae86;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -14px rgba(0,0,0,.7);
+
+  --topbar:rgba(22,24,27,.93);
+  --trama:rgba(208,90,85,.05);
+  --riga-alt:rgba(255,255,255,.035);
+  --riga-hover:rgba(208,90,85,.12);
+  --riga-mia:rgba(200,134,47,.10);
+  --sel-bg:#2a2f36;
+  --sel-tx:#ece7de;
+  /* l'oxblood chiaro del tema scuro vuole testo scuro sopra, non bianco */
+  --su-pieno:#16181b;
+  --velo:rgba(0,0,0,.6);
+  --griglia:#2f353d;
+  --st-bg:#332d1b; --st-bd:#5f5127; --st-tx:#dcc489;
+  --mk-bg:#1c3128; --mk-bd:#3a5d4c; --mk-tx:#8ed0ae;
+  --au-bg:#37211f; --au-bd:#7a3c38; --au-tx:#f0a49c;
+  --ed-bg:#212b33; --ed-bd:#3b4a56; --ed-tx:#a6bac7;
+  --avviso-bg:#2e2716; --avviso-bd:#574823; --avviso-tx:#e2cb95;
+  --loc-bg:#2b2517; --loc-bd:#4d4227;
+  --d-comune:#6b665c; --d-bassa:#6f8f6a; --d-media:#c79b45; --d-alta:#d0743c;
+  --ombra-ocr:rgba(0,0,0,.72);
 }
 
 *{box-sizing:border-box}
@@ -35,7 +97,7 @@ html{-webkit-text-size-adjust:100%}
 body{
   margin:0; background:var(--paper); color:var(--ink);
   font-family:var(--font-body); font-size:var(--text-base); line-height:1.55;
-  background-image:radial-gradient(rgba(140,28,34,.035) 1px, transparent 1px);
+  background-image:radial-gradient(var(--trama) 1px, transparent 1px);
   background-size:22px 22px;
 }
 a{color:var(--oxblood); text-underline-offset:2px}
@@ -44,14 +106,14 @@ a{color:var(--oxblood); text-underline-offset:2px}
 
 /* ------------------------------------------------------------ topbar */
 .topbar{
-  position:sticky; top:0; z-index:40; background:rgba(246,241,231,.93);
+  position:sticky; top:0; z-index:40; background:var(--topbar);
   backdrop-filter:blur(8px); border-bottom:1px solid var(--line);
 }
-.topbar-in{display:flex; align-items:center; justify-content:space-between; gap:var(--space-6); min-height:74px; flex-wrap:wrap; padding-top:var(--space-2); padding-bottom:var(--space-2)}
+.topbar-in{display:flex; align-items:center; justify-content:space-between; gap:var(--space-6); min-height:56px; flex-wrap:wrap; padding-top:var(--space-2); padding-bottom:var(--space-2)}
 .brand{display:flex; align-items:center; gap:var(--space-3); text-decoration:none; color:var(--oxblood)}
-.mark{width:38px; height:38px; flex:0 0 auto}
+.mark{width:32px; height:32px; flex:0 0 auto}
 .brand-txt{display:flex; flex-direction:column; line-height:1.2}
-.brand-txt b{font-family:var(--font-display); font-weight:600; font-size:var(--text-lg); color:var(--ink); letter-spacing:.01em}
+.brand-txt b{font-family:var(--font-display); font-weight:600; font-size:var(--text-base); color:var(--ink); letter-spacing:.01em}
 .brand-txt i{font-style:normal; font-size:var(--text-xs); color:var(--ink-3); letter-spacing:.06em; text-transform:uppercase}
 .tabs{display:flex; gap:var(--space-1); flex-wrap:wrap}
 .tab{
@@ -60,13 +122,13 @@ a{color:var(--oxblood); text-underline-offset:2px}
   background:transparent; color:var(--ink-2);
 }
 .tab:hover{background:rgba(140,28,34,.06); color:var(--oxblood)}
-.tab.is-on{background:var(--ink); color:var(--paper-2)}
+.tab.is-on{background:var(--sel-bg); color:var(--sel-tx)}
 
 /* ------------------------------------------------------------ panels */
-.view{padding:var(--space-8) 0 var(--space-16)}
+.view{padding:var(--space-5) 0 var(--space-10)}
 .panel{
   background:var(--paper-2); border:1px solid var(--line); border-radius:var(--radius);
-  box-shadow:var(--shadow); padding:var(--space-6); margin-bottom:var(--space-6);
+  box-shadow:var(--shadow); padding:var(--space-4); margin-bottom:var(--space-4);
 }
 .h-sec{font-family:var(--font-display); font-weight:600; font-size:var(--text-xl); margin:0 0 var(--space-3); letter-spacing:.005em}
 .h-min{font-size:var(--text-lg); font-weight:600; margin:var(--space-6) 0 var(--space-2)}
@@ -75,19 +137,24 @@ a{color:var(--oxblood); text-underline-offset:2px}
 .lead{color:var(--ink-2); font-size:var(--text-sm); max-width:78ch; margin:0 0 var(--space-4)}
 
 /* ------------------------------------------------------------ kpis */
-.kpis{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:var(--space-3); margin-bottom:var(--space-6)}
-@media (max-width:1180px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
-@media (max-width:820px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.kpi{background:var(--paper-2); border:1px solid var(--line); border-radius:var(--radius); padding:var(--space-4); box-shadow:var(--shadow)}
-.kpi b{display:block; font-family:var(--font-display); font-size:var(--text-xl); font-weight:600; line-height:1.1; font-variant-numeric:tabular-nums}
-.kpi span{display:block; font-size:var(--text-xs); text-transform:uppercase; letter-spacing:.07em; color:var(--ink-3); margin-top:var(--space-2)}
+/* Una riga sola di testo, non sette schede: in quella forma occupavano 249
+   pixel, un terzo di uno schermo di telefono, per undici numeri. */
+.kpis{
+  display:flex; flex-wrap:wrap; align-items:baseline;
+  gap:var(--space-1) var(--space-5);
+  background:var(--paper-2); border:1px solid var(--line-2); border-radius:var(--radius);
+  padding:var(--space-2) var(--space-4); margin-bottom:var(--space-4);
+}
+.kpi{display:flex; align-items:baseline; gap:var(--space-2)}
+.kpi b{font-size:var(--text-sm); font-weight:600; font-variant-numeric:tabular-nums}
+.kpi span{font-size:var(--text-xs); letter-spacing:.02em; color:var(--ink-3)}
 .kpi.accent b{color:var(--oxblood)}
 /* i due gruppi non devono formare un livello: display:contents li rende
    trasparenti e le carte restano celle della stessa griglia */
 .kpi-gruppo{display:contents}
 /* le carte della collezione si distinguono da quelle del catalogo: sono le
    uniche che dipendono da cosa possiedi */
-.kpi.mia{border-left:3px solid var(--gold); background:var(--paper)}
+.kpi.mia{border-left:2px solid var(--gold); padding-left:var(--space-3)}
 .kpi.mia b{color:var(--ink)}
 
 /* ------------------------------------------------------------ filters */
@@ -115,7 +182,7 @@ input:focus-visible, select:focus-visible, .chip:focus-visible, .tab:focus-visib
   transition:background .14s, color .14s, border-color .14s;
 }
 .chip:hover{border-color:var(--oxblood-2); color:var(--oxblood)}
-.chip.is-on{background:var(--oxblood); border-color:var(--oxblood); color:#fff}
+.chip.is-on{background:var(--oxblood); border-color:var(--oxblood); color:var(--su-pieno)}
 .chip.ghost{border-style:dashed}
 .range2{position:relative; height:38px; display:flex; align-items:center}
 .range2 input{position:absolute; width:100%; margin:0; background:transparent; pointer-events:none; -webkit-appearance:none; appearance:none}
@@ -133,18 +200,17 @@ input:focus-visible, select:focus-visible, .chip:focus-visible, .tab:focus-visib
 .grid thead th:last-child{border-top-right-radius:var(--radius)}
 .grid{width:100%; border-collapse:collapse; font-size:var(--text-sm)}
 .grid thead th{
-  position:sticky; top:74px; z-index:5; background:var(--ink); color:var(--paper);
+  position:sticky; top:56px; z-index:5; background:var(--sel-bg); color:var(--sel-tx);
   text-align:left; font-weight:500; font-size:var(--text-xs); text-transform:uppercase;
-  letter-spacing:.07em; padding:var(--space-3) var(--space-4); white-space:nowrap;
+  letter-spacing:.05em; padding:var(--space-1) var(--space-3); white-space:nowrap;
 }
 .grid th.num, .grid td.num{text-align:right; font-variant-numeric:tabular-nums}
-.grid tbody td{padding:var(--space-3) var(--space-4); border-bottom:1px solid var(--line-2); vertical-align:middle}
+.grid tbody td{padding:var(--space-1) var(--space-3); border-bottom:1px solid var(--line-2); vertical-align:middle}
 .grid tbody tr{cursor:pointer}
-.grid tbody tr:nth-child(even){background:rgba(221,210,189,.16)}
-.grid tbody tr:hover{background:rgba(140,28,34,.07)}
+.grid tbody tr:nth-child(even){background:var(--riga-alt)}
+.grid tbody tr:hover{background:var(--riga-hover)}
 .grid .ttl{font-weight:500; max-width:38ch; overflow-wrap:anywhere}
-.grid .sub{display:block; font-size:var(--text-xs); color:var(--ink-3); margin-top:2px; overflow-wrap:anywhere}
-.grid .n{font-family:var(--font-display); font-weight:600; font-size:var(--text-base)}
+.grid .n{font-family:var(--font-display); font-weight:600; font-size:var(--text-sm)}
 .price{font-weight:600}
 .price small{font-weight:400; color:var(--ink-3)}
 .more{padding:var(--space-5); text-align:center; border-top:1px solid var(--line-2)}
@@ -158,13 +224,22 @@ input:focus-visible, select:focus-visible, .chip:focus-visible, .tab:focus-visib
 
 /* tag / badge */
 .tag{display:inline-block; font-size:var(--text-xs); padding:1px var(--space-2); border-radius:3px; border:1px solid var(--line); color:var(--ink-2); background:var(--paper); white-space:nowrap}
-.tag-st{border-color:#cdbd95; background:#f6eed8; color:#77601f}
-.tag-mk{border-color:#a9c4b3; background:#eaf3ee; color:var(--green)}
-.tag-au{border-color:var(--oxblood-2); background:#fbeceb; color:var(--oxblood)}
+.tag-st{border-color:var(--st-bd); background:var(--st-bg); color:var(--st-tx)}
+.tag-mk{border-color:var(--mk-bd); background:var(--mk-bg); color:var(--mk-tx)}
+.tag-au{border-color:var(--au-bd); background:var(--au-bg); color:var(--au-tx)}
+/* Seconda riga della cella del titolo: solo le etichette. Le numerazioni di
+   conversione (Unificato, De Magistris) stavano qui e sono passate alla scheda
+   della serie: erano due numeri che nessuno confronta di sfuggita, e facevano
+   traboccare la riga su due livelli di testo invece di uno. */
+.grid .sub{
+  display:flex; flex-wrap:wrap; gap:var(--space-1); margin-top:2px;
+  font-size:var(--text-xs); color:var(--ink-3);
+}
+.grid .sub:empty{display:none}
 .rar{display:inline-flex; align-items:center; gap:var(--space-2); white-space:nowrap}
 .dot{width:9px; height:9px; border-radius:50%; flex:0 0 auto}
-.r-Comune .dot{background:#c2b9a8} .r-Bassa .dot{background:#9ab08f}
-.r-Media .dot{background:#d7b25a} .r-Alta .dot{background:#d0743c}
+.r-Comune .dot{background:var(--d-comune)} .r-Bassa .dot{background:var(--d-bassa)}
+.r-Media .dot{background:var(--d-media)} .r-Alta .dot{background:var(--d-alta)}
 .r-Estrema .dot{background:var(--oxblood)}
 .pct{font-size:var(--text-xs); color:var(--ink-3); font-variant-numeric:tabular-nums}
 .up{color:var(--oxblood); font-weight:600}
@@ -194,7 +269,7 @@ input:focus-visible, select:focus-visible, .chip:focus-visible, .tab:focus-visib
 /* ------------------------------------------------------------ drawer */
 .drawer{position:fixed; inset:0; z-index:60}
 .drawer[hidden]{display:none}
-.drawer-bg{position:absolute; inset:0; background:rgba(36,31,26,.42)}
+.drawer-bg{position:absolute; inset:0; background:var(--velo)}
 .drawer-in{
   position:absolute; top:0; right:0; height:100%; width:min(560px,100%);
   background:var(--paper-2); border-left:1px solid var(--line); overflow-y:auto;
@@ -203,7 +278,7 @@ input:focus-visible, select:focus-visible, .chip:focus-visible, .tab:focus-visib
 }
 @keyframes slide{from{transform:translateX(24px); opacity:.6} to{transform:none; opacity:1}}
 .x{position:absolute; top:var(--space-4); right:var(--space-4); font:inherit; font-size:var(--text-sm); cursor:pointer; background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); width:34px; height:34px; color:var(--ink-2)}
-.x:hover{background:var(--oxblood); color:#fff; border-color:var(--oxblood)}
+.x:hover{background:var(--oxblood); color:var(--su-pieno); border-color:var(--oxblood)}
 .d-num{font-size:var(--text-xs); text-transform:uppercase; letter-spacing:.1em; color:var(--ink-3)}
 .d-ttl{font-family:var(--font-display); font-size:var(--text-xl); font-weight:600; margin:var(--space-1) 0 var(--space-2); line-height:1.15; overflow-wrap:anywhere; padding-right:var(--space-10)}
 .d-meta{font-size:var(--text-sm); color:var(--ink-2); margin:0 0 var(--space-5)}
@@ -230,21 +305,18 @@ input:focus-visible, select:focus-visible, .chip:focus-visible, .tab:focus-visib
 }
 @media (max-width:600px){
   .wrap{padding:0 var(--space-4)}
-  .panel{padding:var(--space-4)}
   .drawer-in{padding:var(--space-6) var(--space-5) var(--space-12)}
 }
 
 /* timbro di aggiornamento */
-.stamp{font-size:var(--text-xs); color:var(--ink-3); letter-spacing:.03em; margin:0 0 var(--space-4)}
+.stamp{font-size:var(--text-xs); color:var(--ink-3); letter-spacing:.03em; margin:0 0 var(--space-2)}
 .stamp b{color:var(--ink-2); font-weight:600}
 abbr{text-decoration:none; cursor:help}
 .grid td small{white-space:nowrap}
 .grid td.num{white-space:nowrap}
 @media (max-width:600px){
-  .kpis{grid-template-columns:1fr 1fr}
-  .kpi b{font-size:var(--text-xl)}
 }
-.tag-ed{border-color:#b9c4ce; background:#eef2f6; color:#4a5a68}
+.tag-ed{border-color:var(--ed-bd); background:var(--ed-bg); color:var(--ed-tx)}
 
 /* ------------------------------------------------------------ la mia collezione */
 /* I numeri stanno fra gli indicatori in testa e i comandi nel menu: qui resta
@@ -256,15 +328,15 @@ abbr{text-decoration:none; cursor:help}
 }
 .coll-vuota[hidden]{display:none}
 .btn.ghost{background:transparent; color:var(--ink-2); border-style:dashed}
-.btn.ghost:hover{background:var(--oxblood); color:#fff; border-style:solid}
+.btn.ghost:hover{background:var(--oxblood); color:var(--su-pieno); border-style:solid}
 .coll-warn{
   margin:var(--space-3) 0 0; padding:var(--space-3) var(--space-4); border-radius:var(--radius);
-  background:#fdf3e3; border:1px solid #e3cfa5; color:#6b5220; font-size:var(--text-xs);
+  background:var(--avviso-bg); border:1px solid var(--avviso-bd); color:var(--avviso-tx); font-size:var(--text-xs);
 }
 .coll-warn[hidden]{display:none}
 
 /* casella di possesso in tabella */
-.grid th.chk, .grid td.chk{width:52px; text-align:center; padding-left:var(--space-3); padding-right:var(--space-2)}
+.grid th.chk, .grid td.chk{width:40px; text-align:center; padding-left:var(--space-2); padding-right:var(--space-1)}
 .grid td.chk{cursor:default}
 input[type=checkbox]{
   appearance:none; -webkit-appearance:none; width:18px; height:18px; margin:0; cursor:pointer;
@@ -273,13 +345,13 @@ input[type=checkbox]{
 }
 input[type=checkbox]:hover{border-color:var(--oxblood-2)}
 input[type=checkbox]:checked{background:var(--oxblood); border-color:var(--oxblood)}
-input[type=checkbox]:checked::after{content:''; width:9px; height:5px; border:2px solid #fff; border-top:0; border-right:0; transform:rotate(-45deg) translateY(-1px)}
+input[type=checkbox]:checked::after{content:''; width:9px; height:5px; border:2px solid var(--su-pieno); border-top:0; border-right:0; transform:rotate(-45deg) translateY(-1px)}
 input[type=checkbox]:focus-visible{outline:2px solid var(--oxblood-2); outline-offset:2px}
-.grid tr.mine{background:rgba(154,123,47,.07)}
+.grid tr.mine{background:var(--riga-mia)}
 .grid tr.mine td.chk{box-shadow:inset 3px 0 0 var(--gold)}
 .grid .loc{
   display:inline-block; margin-top:3px; font-size:var(--text-xs); color:var(--gold);
-  border:1px solid #e0d3b4; background:#fbf6ea; border-radius:999px; padding:1px 8px;
+  border:1px solid var(--loc-bd); background:var(--loc-bg); border-radius:999px; padding:1px 8px;
 }
 
 /* blocco collezione nella scheda di dettaglio */
@@ -309,8 +381,8 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--oxblood-2); outline-o
 /* ------------------------------------------------- assenza di rete / PWA */
 .offline{
   margin:var(--space-3) 0 0; padding:var(--space-3) var(--space-4);
-  border:1px solid #d7b25a; border-left-width:3px; border-radius:var(--radius);
-  background:#fdf7e6; color:#6b5720; font-size:var(--text-sm);
+  border:1px solid var(--avviso-bd); border-left-width:3px; border-radius:var(--radius);
+  background:var(--avviso-bg); color:var(--avviso-tx); font-size:var(--text-sm);
 }
 /* telefoni con angoli o tacca: si evita che il contenuto finisca sotto */
 body{
@@ -384,10 +456,7 @@ body.bloccato{overflow:hidden}
   .f-acc:not([open]){padding-bottom:var(--space-1)}
 
   /* ------------------------------ indicatori compatti in testa */
-  .kpis{grid-template-columns:1fr 1fr; gap:var(--space-2)}
-  .kpi{padding:var(--space-3)}
-  .kpi b{font-size:var(--text-lg)}
-  .kpi span{font-size:10px; letter-spacing:.04em}
+  .kpis{gap:var(--space-1) var(--space-4); padding:var(--space-2) var(--space-3)}
 
   /* ---------------------------------- la tabella diventa un elenco di schede
      Con dieci colonne su 356 pixel la quotazione, che e' il motivo per cui si
@@ -407,7 +476,7 @@ body.bloccato{overflow:hidden}
     grid-template-columns:auto auto 1fr;
     align-items:center;
     gap:var(--space-1) var(--space-2);
-    margin-bottom:var(--space-3); padding:var(--space-4);
+    margin-bottom:var(--space-2); padding:var(--space-3);
     border:1px solid var(--line-2); border-radius:var(--radius);
     background:var(--paper-2);
   }
@@ -475,7 +544,7 @@ body.bloccato{overflow:hidden}
   flex:0 0 auto; width:44px; padding:0; display:flex; align-items:center; justify-content:center;
   background:var(--paper); color:var(--ink-2); border:1px solid var(--line);
 }
-.btn.foto:hover{background:var(--oxblood); color:#fff; border-color:var(--oxblood)}
+.btn.foto:hover{background:var(--oxblood); color:var(--su-pieno); border-color:var(--oxblood)}
 
 .ocr-guida{font-size:var(--text-sm); color:var(--ink-2); margin:0 0 var(--space-4)}
 .ocr-letto{
@@ -495,7 +564,7 @@ body.bloccato{overflow:hidden}
   border-radius:var(--radius); overflow:hidden; background:var(--ink);
 }
 .ocr-tela img{display:block; max-width:100%; max-height:46vh; width:auto; height:auto}
-.ocr-ombra{position:absolute; left:0; right:0; background:rgba(36,31,26,.66); pointer-events:none}
+.ocr-ombra{position:absolute; left:0; right:0; background:var(--ombra-ocr); pointer-events:none}
 .ocr-banda{
   position:absolute; left:0; right:0; cursor:grab; touch-action:none;
   border:2px solid var(--oxblood-2); background:rgba(176,58,52,.14);
@@ -505,7 +574,7 @@ body.bloccato{overflow:hidden}
 .ocr-etichetta{
   position:absolute; top:50%; left:var(--space-2); transform:translateY(-50%);
   font-size:10px; letter-spacing:.12em; text-transform:uppercase; line-height:1;
-  color:#fff; background:var(--oxblood-2); padding:3px 6px; border-radius:3px;
+  color:var(--su-pieno); background:var(--oxblood-2); padding:3px 6px; border-radius:3px;
   pointer-events:none; opacity:.9;
 }
 .ocr-maniglia{
@@ -534,7 +603,7 @@ body.bloccato{overflow:hidden}
   padding:var(--space-1) var(--space-2); border-radius:999px; background:var(--paper);
   border:1px solid var(--line-2);
 }
-.ocr-pct.ok{background:var(--oxblood); border-color:var(--oxblood); color:#fff}
+.ocr-pct.ok{background:var(--oxblood); border-color:var(--oxblood); color:var(--su-pieno)}
 .ocr-nome{display:flex; flex-direction:column; min-width:0}
 .ocr-nome b{font-weight:500; overflow-wrap:anywhere}
 .ocr-nome i{font-style:normal; font-size:var(--text-xs); color:var(--ink-3); margin-top:2px}
@@ -564,7 +633,7 @@ body.bloccato{overflow:hidden}
   border:1px solid var(--line); border-radius:var(--radius);
 }
 .menu-btn:hover{border-color:var(--oxblood-2); color:var(--oxblood)}
-.menu-btn[aria-expanded="true"]{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+.menu-btn[aria-expanded="true"]{background:var(--sel-bg); color:var(--sel-tx); border-color:var(--sel-bg)}
 .menu-ora{white-space:nowrap}
 
 .menu-voci{
@@ -575,7 +644,7 @@ body.bloccato{overflow:hidden}
 }
 .menu-voci[hidden]{display:none}
 .menu-voci .tab{text-align:left; min-height:44px; border-radius:var(--radius)}
-.menu-voci .tab.is-on{background:var(--ink); color:var(--paper-2)}
+.menu-voci .tab.is-on{background:var(--sel-bg); color:var(--sel-tx)}
 /* sotto la riga: comandi, non viste. Stesso ingombro delle voci di vista,
    peso visivo minore. */
 .menu-sep{height:1px; margin:var(--space-2) var(--space-1); border:0; background:var(--line)}
