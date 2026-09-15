@@ -18,16 +18,22 @@ sorgenti nella propria directory.
   pubblica viene rivista.
 
 ### `ebay_active.json` — inserzioni attive su eBay.it
-- **Contenuto**: 9.609 inserzioni, una per oggetto, con quattro campi compatti
+- **Contenuto**: 11.448 inserzioni, una per oggetto, con i campi compatti
   `t` (titolo), `p` (prezzo come stringa, es. `EUR 1,14`), `r` (riga informativa: offerte,
-  tempo rimasto, spedizione) e `u` (URL dell'inserzione).
-- **Origine**: lettura pagina per pagina dei risultati di ricerca pubblici di
-  https://www.ebay.it con le quattordici query elencate in `AGGIORNAMENTO_GIORNALIERO.md`
-  (sei italiane, le altre internazionali).
+  tempo rimasto, spedizione) e `u` (URL dell'inserzione), più i campi che la Browse API
+  dà esatti: `asta`, `offerte`, `sped` e `venditore`.
+- **Origine**: Browse API ufficiale di eBay con le quattordici query elencate in
+  `AGGIORNAMENTO_GIORNALIERO.md` (sei italiane, le altre internazionali), più una passata
+  dedicata alle aste.
 - **Ruolo**: è l'unica fonte di prezzo del catalogo. Da qui nascono mediana, minimo,
   massimo, numero di offerte e aste in corso di ciascuna serie.
+- **Annunci ripetuti**: il file è il verbale di ciò che eBay ha risposto e li conserva.
+  È `build_dataset.py`, in `accorpa_ripetute()`, ad accorparli: una sola offerta per
+  venditore e per titolo, al prezzo più basso, con aste e compralo subito tenuti separati
+  (1.146 righe su 11.448, in larga parte di un solo negozio). Serve il campo `venditore`,
+  quindi sui rilevamenti archiviati prima del 15 settembre 2026 non succede nulla.
 - **Aggiornamento**: ogni mattina. Il rilevamento presente nel repository è quello del
-  14 settembre 2026, lo stesso pubblicato su https://liebig.pplx.app.
+  15 settembre 2026.
 
 ### `mlc_all.json` — elenco di riferimento complementare
 - **Contenuto**: 354 voci con campi `num`, `titolo`, `anno`, `ed`, `img`, `id`.

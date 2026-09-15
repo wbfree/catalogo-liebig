@@ -155,10 +155,44 @@ def carica_ebay():
         anno_ins = int(m_anno.group(1)) if m_anno else None
         out.append({"t": t, "prezzo": round(pz, 2), "num": num, "ed": ed,
                     "asta": asta, "url": r["u"], "tipo": tipo, "singola": singola,
-                    "anno_ins": anno_ins,
+                    "anno_ins": anno_ins, "venditore": r.get("venditore"),
                     "sped": bool(r["sped"]) if "sped" in r
                             else bool(re.search(r"Consegna gratuita", r["r"], re.I))})
-    return out
+    return accorpa_ripetute(out)
+
+def accorpa_ripetute(righe):
+    """Una sola offerta per venditore e per titolo, al suo prezzo migliore.
+
+    Parecchi negozi mettono la stessa serie in vendita in piu' annunci: uno per
+    copia in magazzino, spesso a prezzi leggermente diversi. Hanno codici
+    inserzione diversi, quindi la deduplica per URL non li vede, ma per chi
+    consulta il catalogo sono una riga sola ripetuta: gonfiano la colonna
+    offerte e danno a un solo venditore tanti voti quanti annunci nel calcolo
+    della mediana (un negozio arrivava a trentotto annunci identici).
+
+    Si tiene il piu' economico, che e' il prezzo a cui quella serie si compra
+    davvero da quel venditore. Le aste restano separate dal compralo subito:
+    sono occasioni diverse, e quelle alimentano la tabella delle aste in corso.
+
+    Sui rilevamenti archiviati prima del 15 settembre 2026 il venditore non
+    c'e': quelli restano come sono.
+    """
+    tenute, senza_venditore, ripetute = {}, [], 0
+    for r in righe:
+        if not r.get("venditore"):
+            senza_venditore.append(r)
+            continue
+        chiave = (r["venditore"], " ".join(r["t"].lower().split()), r["asta"])
+        vecchia = tenute.get(chiave)
+        if vecchia is None:
+            tenute[chiave] = r
+        else:
+            ripetute += 1
+            if r["prezzo"] < vecchia["prezzo"]:
+                tenute[chiave] = r
+    if ripetute:
+        print(f"annunci ripetuti dallo stesso venditore, accorpati: {ripetute}")
+    return senza_venditore + list(tenute.values())
 
 # ---------------------------------------------------------------- match per titolo
 STOP = set("""di del della delle dei degli da dal con per il lo la le i gli un una e ed in su al alla

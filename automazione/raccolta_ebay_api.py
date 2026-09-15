@@ -10,8 +10,10 @@ produzione, non sandbox).
     python automazione/raccolta_ebay_api.py [--pagine 10] [--minimo 3000]
 
 Scrive ebay_active.json nella radice: per ogni inserzione i campi {t,p,r,u}
-piu' alcuni campi strutturati (asta, offerte, spedizione) che l'API fornisce
-esatti.
+piu' alcuni campi strutturati (asta, offerte, spedizione, venditore) che l'API
+fornisce esatti. Il file resta il verbale di cio' che eBay ha risposto, annunci
+ripetuti compresi: e' build_dataset.py ad accorpare quelli dello stesso
+venditore.
 """
 import argparse, base64, datetime, json, os, pathlib, shutil, sys, time
 import requests
@@ -99,6 +101,10 @@ def converti(it):
         "asta": asta,
         "offerte": offerte if asta else None,
         "sped": gratis,
+        # serve a riconoscere le inserzioni ripetute: certi venditori mettono
+        # in vendita la stessa serie in dieci annunci identici, uno per copia,
+        # e senza il venditore non si distinguono da dieci offerte diverse
+        "venditore": (it.get("seller") or {}).get("username"),
     }
 
 def cerca(tok, q, pagine, filtro=None):

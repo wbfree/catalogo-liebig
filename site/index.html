@@ -283,13 +283,20 @@
         del fascicolo, le quotazioni ufficiali possono essere importate in una colonna aggiuntiva.</p>
 
       <h3 class="h-min">3. Prezzi di mercato</h3>
-      <p>Le inserzioni <b>attive</b> su eBay.it vengono lette direttamente dalle pagine di ricerca con quattordici
+      <p>Le inserzioni <b>attive</b> su eBay.it vengono lette con la <b>Browse API ufficiale di eBay</b>, con quattordici
         chiavi diverse — sei in italiano (<span class="mono">figurine liebig</span>, <span class="mono">liebig
         sang</span>, <span class="mono">liebig serie completa</span>, <span class="mono">chromo liebig ita</span>,
         <span class="mono">liebig figurine ita</span>, <span class="mono">liebig estratto di carne figurine</span>) e
         otto rivolte al mercato estero (<span class="mono">liebig sammelbilder serie</span>,
         <span class="mono">liebig chromos serie complete</span>, <span class="mono">liebig trade cards set</span>,
-        <span class="mono">liebig bilderserie</span> e altre) — e deduplicate per codice inserzione. L'abbinamento
+        <span class="mono">liebig bilderserie</span> e altre) — e deduplicate per codice inserzione. Un secondo passaggio
+        accorpa gli <b>annunci ripetuti</b>: molti negozi mettono la stessa serie in vendita in più annunci, uno per
+        copia in magazzino e spesso a prezzi leggermente diversi &mdash; un solo venditore arrivava a trentotto annunci
+        identici. Hanno codici inserzione diversi, ma per chi consulta il catalogo sono una riga sola ripetuta: si tiene
+        <b>una sola offerta per venditore e per titolo</b>, al suo prezzo migliore, tenendo separate le aste dal
+        compralo subito. Sono circa mille annunci su undicimila. Senza questo accorpamento un unico negozio poteva da
+        solo decidere la mediana di una serie: la serie 547, per dirne una, passa da quindici offerte e mediana
+        &euro;&nbsp;31,99 a sei offerte e mediana &euro;&nbsp;23,00. L'abbinamento
         alla serie avviene in due passaggi: prima per numero Sanguinetti dichiarato nel titolo
         (<span class="mono">SANG. 729</span>, <span class="mono">Serie N° 335</span>, <span class="mono">N.1123</span>,
         <span class="mono">série n°710</span>, <span class="mono">S1377</span>,
