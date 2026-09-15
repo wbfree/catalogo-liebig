@@ -404,12 +404,16 @@ def main(soglia=0.6, forza=False, prova=False):
     # rarità RELATIVA: quintili sul punteggio composito all'interno del corpus
     ordinate = sorted(serie, key=lambda x: x["rarita_score"])
     n = len(ordinate)
+    # attenzione: la variabile del ciclo qui sotto non deve chiamarsi "soglia".
+    # Python non delimita lo scope al ciclo: il nome sopravvive fino in fondo a
+    # main() e finirebbe nella chiamata a scrivi_supabase() al posto del
+    # parametro, portandosi dietro l'ultimo quintile (1.01).
     etichette = [(0.20, "Comune"), (0.40, "Bassa"), (0.60, "Media"), (0.80, "Alta"), (1.01, "Estrema")]
     for i, s in enumerate(ordinate):
         pct = (i + 0.5) / n
         s["percentile"] = round(pct * 100, 1)
-        for soglia, lab in etichette:
-            if pct <= soglia:
+        for limite, lab in etichette:
+            if pct <= limite:
                 s["rarita"] = lab
                 break
 
