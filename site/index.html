@@ -33,14 +33,23 @@
         <path d="M17.5 21.5h9" stroke="currentColor" stroke-width="1.4" opacity=".6"/>
       </svg>
       <span class="brand-txt">
-        <b>Catalogo Liebig</b>
+        <b>Catalogo Liebig <span class="ver" id="ver" title="Versione pubblicata"></span></b>
         <i>tutte le serie 1872 – 1975 · numerazione Sanguinetti</i>
       </span>
     </a>
-    <nav class="tabs" role="tablist">
-      <button class="tab is-on" data-view="catalogo" role="tab">Catalogo</button>
-      <button class="tab" data-view="monitoraggio" role="tab">Monitoraggio eBay</button>
-      <button class="tab" data-view="metodo" role="tab">Metodo e fonti</button>
+    <nav class="menu">
+      <button class="menu-btn" id="menuBtn" type="button"
+              aria-haspopup="true" aria-expanded="false" aria-controls="menuVoci">
+        <span class="menu-ora" id="menuOra">Catalogo</span>
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <div class="menu-voci" id="menuVoci" hidden>
+        <button class="tab is-on" data-view="catalogo" type="button">Catalogo</button>
+        <button class="tab" data-view="monitoraggio" type="button">Monitoraggio eBay</button>
+        <button class="tab" data-view="metodo" type="button">Metodo e fonti</button>
+      </div>
     </nav>
   </div>
 </header>

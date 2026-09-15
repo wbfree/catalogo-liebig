@@ -10,7 +10,11 @@
    modifica alla collezione deve arrivare al database o fallire in modo
    visibile, mai essere servita da una copia vecchia. */
 
-const VERSIONE = 'liebig-v9';
+/* La versione arriva da js/config.js, che e' anche quello che la pagina mostra
+   in testata: cosi' c'e' un numero solo da alzare quando si pubblica, e quello
+   che si legge sullo schermo corrisponde per forza alle cache in uso. */
+importScripts('./js/config.js');
+const VERSIONE = 'liebig-v' + self.LIEBIG_CONFIG.versione;
 const GUSCIO = VERSIONE + '-guscio';
 const DATI = VERSIONE + '-dati';
 

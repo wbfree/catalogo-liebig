@@ -146,6 +146,7 @@
   }
 
   (async () => {
+    mostraVersione();          // prima di tutto: serve anche se il catalogo non carica
     if (!DB.configurata()) {
       return errore("Il catalogo non e' configurato: manca la chiave Supabase in js/config.js.");
     }
@@ -171,6 +172,15 @@
     addEventListener('offline', rete);
     renderKpis(); bind(); collStat(); apply(); renderMonitor();
   })();
+
+  /* Versione in chiaro: senza, dopo un aggiornamento non c'e' modo di sapere
+     se quello che si ha davanti e' la copia nuova o quella in cache. */
+  function mostraVersione() {
+    const v = (window.LIEBIG_CONFIG || {}).versione;
+    if (!v) return;
+    $('#ver').textContent = 'v' + v;
+    document.title = 'Catalogo Liebig v' + v + ' · tutte le serie 1872–1975';
+  }
 
   function renderKpis() {
     const dt = new Date(META.aggiornato);
@@ -221,9 +231,28 @@
 
     $('#more').addEventListener('click', () => { state.limit += 200; renderTable(); });
 
+    /* Le tre viste stanno in un menu a tendina invece che in tre pulsanti
+       affiancati: in testata ci sta comodo anche su schermo stretto, dove
+       andavano a capo occupando due righe. */
+    const menu = $('#menuVoci'), bottoneMenu = $('#menuBtn');
+    const apriMenu = apri => {
+      menu.hidden = !apri;
+      bottoneMenu.setAttribute('aria-expanded', apri ? 'true' : 'false');
+    };
+    bottoneMenu.addEventListener('click', e => {
+      e.stopPropagation();
+      apriMenu(menu.hidden);
+    });
+    document.addEventListener('click', e => {
+      if (!menu.hidden && !e.target.closest('.menu')) apriMenu(false);
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') apriMenu(false); });
+
     $$('.tab').forEach(t => t.addEventListener('click', () => {
       $$('.tab').forEach(x => x.classList.toggle('is-on', x === t));
       $$('.view').forEach(v => v.hidden = v.id !== 'view-' + t.dataset.view);
+      $('#menuOra').textContent = t.textContent.trim();
+      apriMenu(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }));
 

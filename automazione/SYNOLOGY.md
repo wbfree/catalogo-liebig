@@ -298,7 +298,14 @@ il service worker si attiva dopo che la pagina ha gia' chiesto i dati.
 
 ### Quando cambia il codice
 
-`sw.js` contiene una costante `VERSIONE`. Cambiandola (`liebig-v1` -> `liebig-v2`) le
-cache vecchie vengono buttate al primo caricamento successivo. Se modifichi CSS o
-JavaScript e sul telefono continui a vedere la versione vecchia, e' quella la riga da
-toccare.
+Alza il numero in **`site/js/config.js`**:
+
+```js
+self.LIEBIG_CONFIG = { versione: 11, ... }
+```
+
+E' l'unico posto da toccare. Da li' nascono sia i nomi delle cache del service worker
+(che importa quel file), sia la sigla mostrata in testata e nel titolo della pagina: se
+sul telefono leggi `v11` stai guardando la versione nuova, se leggi `v10` stai ancora
+vedendo quella in cache. Le cache vecchie vengono buttate al primo caricamento
+successivo.
