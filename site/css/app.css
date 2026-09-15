@@ -542,3 +542,11 @@ body.bloccato{overflow:hidden}
   .ocr-azioni{flex-direction:column}
   .ocr-azioni .btn{width:100%}
 }
+
+/* il ritaglio che e' stato letto davvero: senza vederlo, un riconoscimento
+   sbagliato resta inspiegabile */
+.ocr-ritaglio{
+  max-width:100%; height:auto; border:1px solid var(--line);
+  border-radius:var(--radius); margin-bottom:var(--space-4);
+}
+.ocr-letto{max-height:8.5em; overflow:auto}
