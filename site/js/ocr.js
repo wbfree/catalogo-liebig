@@ -240,7 +240,12 @@
      non ha aiutato in nessuno dei due casi: il problema e' cosa entra nella
      striscia, non quanto contrasto ha.) */
   const FETTE = [
-    [0, 1], [0, 0.55], [0.45, 1], [0, 0.40], [0.30, 0.70], [0.60, 1]
+    [0, 1,       'tutta la fascia che hai indicato'],
+    [0, 0.55,    'la metà alta della fascia'],
+    [0.45, 1,    'la metà bassa della fascia'],
+    [0, 0.40,    'il terzo alto della fascia'],
+    [0.30, 0.70, 'la parte centrale della fascia'],
+    [0.60, 1,    'il terzo basso della fascia']
   ];
 
   const miglior = testo => {
@@ -268,18 +273,18 @@
         stato('Preparo il riconoscitore…');
         lavoratore = await Tesseract.createWorker('ita');
       }
-      let testo = '', usata = null, punteggio = -1;
+      let testo = '', usata = null, descrizione = '', punteggio = -1;
       for (let i = 0; i < FETTE.length; i++) {
         stato(i ? 'Cerco la riga del titolo… (' + (i + 1) + ' di ' + FETTE.length + ')'
                 : 'Leggo il titolo…');
-        const [a, b] = FETTE[i];
+        const [a, b, nome] = FETTE[i];
         const fetta = ritaglia(img, cima + (fondo - cima) * a, cima + (fondo - cima) * b);
         const { data } = await lavoratore.recognize(fetta);
         const p = miglior(data.text);
-        if (p > punteggio) { punteggio = p; testo = data.text; usata = fetta; }
+        if (p > punteggio) { punteggio = p; testo = data.text; usata = fetta; descrizione = nome; }
         if (punteggio >= SOGLIA) break;          // agganciato: inutile insistere
       }
-      mostra(testo, usata ? usata.toDataURL('image/jpeg', 0.7) : null);
+      mostra(testo, usata ? usata.toDataURL('image/jpeg', 0.7) : null, descrizione);
     } catch (e) {
       console.error('riconoscimento', e);
       corpo(
@@ -291,16 +296,17 @@
     }
   }
 
-  function mostra(testoGrezzo, ritaglioUrl) {
+  function mostra(testoGrezzo, ritaglioUrl, descrizione) {
     const testo = String(testoGrezzo ?? '').replace(/\s+/g, ' ').trim();
     const cand = candidati(testoGrezzo).filter(c => c.r >= 0.45);
     const buoni = cand.filter(c => c.r >= SOGLIA);
 
-    /* Si mostra sempre il ritaglio effettivamente letto: quando il
-       riconoscimento sbaglia, quasi sempre e' perche' la fascia era sul punto
-       sbagliato, e vedendola si capisce subito senza dover indovinare. */
+    /* Si mostra sempre il ritaglio effettivamente letto, e si dice QUALE
+       porzione e': la ricerca prova sottostrisce della fascia indicata, quindi
+       quasi mai la striscia mostrata coincide con quella selezionata. Senza
+       dirlo sembra che il ritaglio non c'entri niente con la scelta fatta. */
     let html = ritaglioUrl
-      ? '<p class="ocr-guida">Ho letto questa striscia:</p>' +
+      ? '<p class="ocr-guida">Ho letto <b>' + esc(descrizione || 'questa porzione') + '</b>:</p>' +
         '<div class="ocr-telaio"><img class="ocr-ritaglio" src="' + esc(ritaglioUrl) + '" alt=""></div>'
       : '';
 

@@ -10,7 +10,7 @@
    modifica alla collezione deve arrivare al database o fallire in modo
    visibile, mai essere servita da una copia vecchia. */
 
-const VERSIONE = 'liebig-v8';
+const VERSIONE = 'liebig-v9';
 const GUSCIO = VERSIONE + '-guscio';
 const DATI = VERSIONE + '-dati';
 
