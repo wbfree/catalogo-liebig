@@ -10,14 +10,14 @@
    modifica alla collezione deve arrivare al database o fallire in modo
    visibile, mai essere servita da una copia vecchia. */
 
-const VERSIONE = 'liebig-v2';
+const VERSIONE = 'liebig-v3';
 const GUSCIO = VERSIONE + '-guscio';
 const DATI = VERSIONE + '-dati';
 
 const FILE = [
   './', './index.html', './css/app.css',
   './js/config.js', './js/db.js', './js/app.js',
-  './manifest.webmanifest',
+  './manifest.json',
   './icone/icona-192.png', './icone/icona-512.png',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js'
 ];

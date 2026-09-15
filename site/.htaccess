@@ -1,0 +1,7 @@
+# Tipi MIME che Apache non conosce di suo.
+# Serve se un giorno si torna a manifest.webmanifest: senza Content-Type
+# Chrome non considera il sito installabile. Innocuo se il server e' nginx
+# o se AllowOverride e' disattivato: viene semplicemente ignorato.
+AddType application/manifest+json .webmanifest
+AddType application/json .json
+AddType text/javascript .js
