@@ -96,15 +96,18 @@
   /* ------------------------------------------------- inquadra la fascia */
   function inquadra(url) {
     corpo(
-      '<p class="ocr-guida">Sposta la fascia sul <b>titolo della serie</b>, la scritta in alto ' +
-      'sulla figurina. Lascia fuori la didascalia e il numero.</p>' +
-      '<div class="ocr-tela" id="ocrTela">' +
-        '<img id="ocrImg" src="' + esc(url) + '" alt="">' +
-        '<div class="ocr-ombra" id="ombraSopra"></div>' +
-        '<div class="ocr-ombra" id="ombraSotto"></div>' +
-        '<div class="ocr-banda" id="ocrBanda">' +
-          '<span class="ocr-maniglia alto" data-lato="alto"></span>' +
-          '<span class="ocr-maniglia basso" data-lato="basso"></span>' +
+      '<p class="ocr-guida"><b>Tocca il titolo</b> sulla figurina — la scritta in alto — ' +
+      'oppure trascina la fascia. Poi premi «Leggi il titolo».</p>' +
+      '<div class="ocr-telaio">' +
+        '<div class="ocr-tela" id="ocrTela">' +
+          '<img id="ocrImg" src="' + esc(url) + '" alt="">' +
+          '<div class="ocr-ombra" id="ombraSopra"></div>' +
+          '<div class="ocr-ombra" id="ombraSotto"></div>' +
+          '<div class="ocr-banda" id="ocrBanda">' +
+            '<span class="ocr-etichetta">titolo</span>' +
+            '<span class="ocr-maniglia alto" data-lato="alto"></span>' +
+            '<span class="ocr-maniglia basso" data-lato="basso"></span>' +
+          '</div>' +
         '</div>' +
       '</div>' +
       '<div class="ocr-azioni">' +
@@ -115,18 +118,30 @@
     const tela = $('#ocrTela'), banda = $('#ocrBanda');
     let cima = 0.02, fondo = 0.20;          // frazioni dell'altezza dell'immagine
 
+    /* In percentuali e non in pixel: cosi' non c'e' niente da misurare e la
+       fascia e' al posto giusto anche prima che l'immagine sia impaginata.
+       Calcolandola su clientHeight, se il contenitore non era ancora alto
+       veniva fuori una fascia di altezza zero, cioe' invisibile. */
     function disegna() {
-      const h = tela.clientHeight;
-      banda.style.top = (cima * h) + 'px';
-      banda.style.height = ((fondo - cima) * h) + 'px';
-      $('#ombraSopra').style.top = '0px';
-      $('#ombraSopra').style.height = (cima * h) + 'px';
-      $('#ombraSotto').style.top = (fondo * h) + 'px';
-      $('#ombraSotto').style.height = ((1 - fondo) * h) + 'px';
+      banda.style.top = (cima * 100) + '%';
+      banda.style.height = ((fondo - cima) * 100) + '%';
+      $('#ombraSopra').style.top = '0';
+      $('#ombraSopra').style.height = (cima * 100) + '%';
+      $('#ombraSotto').style.top = (fondo * 100) + '%';
+      $('#ombraSotto').style.height = ((1 - fondo) * 100) + '%';
     }
-    $('#ocrImg').addEventListener('load', disegna);
-    addEventListener('resize', disegna);
-    setTimeout(disegna, 60);
+    disegna();
+
+    /* Un tocco sulla foto porta la fascia li': su un telefono e' molto piu'
+       comodo che trascinare, e le maniglie restano per la regolazione fine. */
+    tela.addEventListener('click', e => {
+      if (e.target.closest('.ocr-banda')) return;
+      const r = tela.getBoundingClientRect();
+      const altezza = fondo - cima;
+      cima = Math.min(Math.max(0, (e.clientY - r.top) / r.height - altezza / 2), 1 - altezza);
+      fondo = cima + altezza;
+      disegna();
+    });
 
     let trascina = null, y0 = 0, c0 = 0, f0 = 0;
 
@@ -138,7 +153,8 @@
     });
     addEventListener('pointermove', e => {
       if (!trascina) return;
-      const d = (e.clientY - y0) / tela.clientHeight;
+      const alt = tela.getBoundingClientRect().height || 1;
+      const d = (e.clientY - y0) / alt;
       if (trascina === 'alto') {
         cima = Math.min(Math.max(0, c0 + d), fondo - 0.04);
       } else if (trascina === 'basso') {
