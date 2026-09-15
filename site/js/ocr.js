@@ -64,9 +64,25 @@
      ritaglio entra anche la didascalia ("Nr. 2. PINO."), confrontare tutto
      insieme abbassa la somiglianza col titolo e la fa scendere sotto soglia.
      Riga per riga, invece, l'inquadratura generosa non fa danno. */
+  /* Sul retro delle figurine il titolo della serie e' seguito, sulla stessa
+     riga, dal numero e dal soggetto della singola figurina:
+
+         TIPICHE ABITAZIONI ITALIANE - 2 - La casa della pianura
+
+     Confrontando tutta la riga con "TIPICHE ABITAZIONI ITALIANE" la
+     somiglianza scende sotto il 58%, cioe' sotto soglia, e la serie giusta
+     verrebbe scartata. Si spezza quindi anche sui separatori, e ogni
+     spezzone diventa un candidato a se'. */
+  const SEPARATORI = /[-–—·•:|\/]+/;
+
   function candidati(testoGrezzo, quanti = 3) {
-    const pezzi = String(testoGrezzo ?? '').split(RIGHE)
-      .map(x => x.trim()).filter(plausibile);
+    const righe = String(testoGrezzo ?? '').split(RIGHE).map(x => x.trim());
+    const pezzi = [];
+    for (const riga of righe) {
+      if (plausibile(riga)) pezzi.push(riga);
+      const parti = riga.split(SEPARATORI).map(x => x.trim()).filter(plausibile);
+      if (parti.length > 1) pezzi.push(...parti);
+    }
     const intero = String(testoGrezzo ?? '').replace(/\s+/g, ' ').trim();
     if (plausibile(intero)) pezzi.push(intero);
     if (!pezzi.length) return [];
