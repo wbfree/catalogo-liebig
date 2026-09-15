@@ -316,3 +316,144 @@ body{
   padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);
 }
 .foot{padding-bottom:calc(var(--space-8) + env(safe-area-inset-bottom))}
+
+/* ==========================================================================
+   Intestazione fissa della scheda di dettaglio
+   Il pulsante di chiusura era in posizione assoluta dentro un contenitore che
+   scorre: scendendo nella scheda spariva, e su telefono restava solo il tocco
+   sullo sfondo, che a tutto schermo non esiste.
+   ========================================================================== */
+.d-testa{
+  position:sticky; top:0; z-index:3;
+  display:flex; align-items:center; gap:var(--space-3);
+  margin:calc(-1 * var(--space-8)) calc(-1 * var(--space-8)) var(--space-5);
+  padding:var(--space-3) var(--space-4);
+  background:var(--paper-2); border-bottom:1px solid var(--line-2);
+}
+.d-testa-ttl{
+  font-size:var(--text-sm); font-weight:500; color:var(--ink-2);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.x{position:static; flex:0 0 auto}
+
+/* ==========================================================================
+   Ricerca e filtri richiudibili
+   ========================================================================== */
+.f-somm{
+  cursor:pointer; font-size:var(--text-sm); font-weight:500; color:var(--ink-2);
+  padding:var(--space-2) 0; list-style:none; display:none;
+  align-items:center; gap:var(--space-2);
+}
+.f-somm::-webkit-details-marker{display:none}
+.f-somm::before{content:'▸'; color:var(--oxblood); transition:transform .15s}
+.f-acc[open] > .f-somm::before{transform:rotate(90deg)}
+.f-quanti{color:var(--ink-3); font-size:var(--text-xs)}
+
+/* blocco dello scorrimento dietro alla scheda aperta */
+body.bloccato{overflow:hidden}
+
+/* ==========================================================================
+   Telefono
+   ========================================================================== */
+@media (max-width:640px){
+
+  /* ---------------------------------------------- scheda a tutto schermo */
+  .drawer-in{
+    position:fixed; inset:0; width:auto; height:auto; max-width:none;
+    border-left:none; box-shadow:none; overscroll-behavior:contain;
+    padding:0 var(--space-4) calc(var(--space-12) + env(safe-area-inset-bottom));
+    animation:sale .2s ease-out;
+  }
+  @keyframes sale{from{transform:translateY(18px); opacity:.5} to{transform:none; opacity:1}}
+  .d-testa{
+    margin:0 calc(-1 * var(--space-4)) var(--space-4);
+    padding-top:calc(var(--space-3) + env(safe-area-inset-top));
+  }
+  /* bersagli da dito: sotto i 44px si sbaglia */
+  .x{width:44px; height:44px; font-size:var(--text-base)}
+  .d-ttl{padding-right:0; font-size:var(--text-lg)}
+  .d-grid{grid-template-columns:1fr 1fr; gap:var(--space-2)}
+  .d-fields{grid-template-columns:1fr}
+  .lst li{flex-wrap:wrap; gap:var(--space-1) var(--space-3)}
+  .d-links{flex-direction:column}
+  .d-links a{padding:var(--space-3); text-align:center; border:1px solid var(--line); border-radius:var(--radius)}
+
+  /* ------------------------------------------------ filtri richiusi */
+  .f-somm{display:flex}
+  .f-acc:not([open]){padding-bottom:var(--space-1)}
+
+  /* ------------------------------ indicatori compatti in testa */
+  .kpis{grid-template-columns:1fr 1fr; gap:var(--space-2)}
+  .kpi{padding:var(--space-3)}
+  .kpi b{font-size:var(--text-lg)}
+  .kpi span{font-size:10px; letter-spacing:.04em}
+
+  /* ---------------------------------- la tabella diventa un elenco di schede
+     Con dieci colonne su 356 pixel la quotazione, che e' il motivo per cui si
+     guarda il catalogo, finiva fuori schermo. Le celle vengono ricollocate con
+     la griglia, che permette di ignorare l'ordine nel documento: numero e anno
+     in testa, titolo sotto, quotazione in evidenza. Anno a parte, i dati
+     secondari (figurine, minimo e massimo, scostamento) restano nella scheda. */
+  .tablewrap{overflow:visible; padding:0; border:none; background:transparent}
+  .grid, .grid tbody{display:block}
+  .grid thead{display:none}
+  /* sotto i 900px la tabella aveva min-width:820px per restare leggibile
+     scorrendo in orizzontale: qui diventa un elenco, quindi va tolto */
+  .grid{min-width:0; width:auto}
+
+  .grid tbody tr{
+    display:grid;
+    grid-template-columns:auto auto 1fr;
+    align-items:center;
+    gap:var(--space-1) var(--space-2);
+    margin-bottom:var(--space-3); padding:var(--space-4);
+    border:1px solid var(--line-2); border-radius:var(--radius);
+    background:var(--paper-2);
+  }
+  .grid tbody tr:nth-child(even){background:var(--paper-2)}
+  .grid tbody tr.mine{border-left:3px solid var(--gold)}
+
+  /* si azzerano le regole della tabella: sono piu' specifiche delle mie */
+  .grid tbody td{
+    display:block; padding:0; border-bottom:none; text-align:left;
+    white-space:normal; width:auto;
+  }
+  .grid td.num, .grid th.num{text-align:left}
+  .grid .ttl{max-width:none}
+
+  /* riga 1: numero, anno, spunta di possesso all'estremita' */
+  .grid tbody td:nth-child(2){grid-column:1; grid-row:1}
+  .grid tbody td:nth-child(4){grid-column:2; grid-row:1}
+  .grid tbody td.chk{grid-column:3; grid-row:1; justify-self:end; width:auto; padding:0}
+  .grid tbody td.chk input{width:28px; height:28px}
+  .grid tbody td:nth-child(2), .grid tbody td:nth-child(4){
+    font-size:var(--text-xs); color:var(--ink-3); letter-spacing:.06em; text-transform:uppercase;
+  }
+  .grid tbody td:nth-child(2)::before{content:'Sang. '}
+  .grid tbody td:nth-child(2) .n{font-size:var(--text-sm); color:var(--ink-2)}
+
+  /* riga 2: titolo, etichette e collocazione */
+  .grid tbody td:nth-child(3){grid-column:1 / -1; grid-row:2; margin:var(--space-1) 0}
+  .grid .ttl{font-size:var(--text-base)}
+
+  /* riga 3: quotazione in evidenza, poi offerte e rarita' */
+  .grid tbody td:nth-child(6){
+    grid-column:1; grid-row:3;
+    font-family:var(--font-display); font-size:var(--text-lg); font-weight:600; color:var(--ink);
+  }
+  .grid tbody td:nth-child(8){grid-column:2; grid-row:3; font-size:var(--text-sm); white-space:nowrap}
+  .grid tbody td:nth-child(8)::before{
+    content:'offerte '; color:var(--ink-3); font-size:var(--text-xs); text-transform:uppercase;
+  }
+  .grid tbody td:nth-child(9){grid-column:3; grid-row:3; justify-self:end}
+
+  /* questi stanno nella scheda di dettaglio, non serve ripeterli qui */
+  .grid tbody td:nth-child(5),
+  .grid tbody td:nth-child(7),
+  .grid tbody td:nth-child(10){display:none}
+
+  .grid tbody td.empty{grid-column:1 / -1; padding:var(--space-6) !important; text-align:center}
+
+  .more{margin-top:var(--space-2)}
+  .more .btn{width:100%}
+}

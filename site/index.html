@@ -51,6 +51,8 @@
     <div class="kpis" id="kpis"></div>
 
     <div class="panel filters">
+     <details class="f-acc" id="fAcc" open>
+      <summary class="f-somm">Ricerca e filtri<span class="f-quanti" id="fQuanti"></span></summary>
       <div class="f-row">
         <div class="field grow">
           <label for="q">Ricerca libera</label>
@@ -139,6 +141,8 @@
           </div>
         </div>
       </div>
+
+     </details>
 
       <div class="mycoll" id="mycoll">
         <p id="collStat">Nessuna serie ancora contrassegnata come tua. Spunta la casella nella colonna <b>Mia</b> per iniziare a costruire l'inventario.</p>
@@ -320,7 +324,10 @@
 <div class="drawer" id="drawer" hidden>
   <div class="drawer-bg" data-close></div>
   <aside class="drawer-in" role="dialog" aria-modal="true" aria-labelledby="dTitle">
-    <button class="x" data-close aria-label="Chiudi">✕</button>
+    <div class="d-testa">
+      <button class="x" data-close aria-label="Chiudi la scheda">✕</button>
+      <span class="d-testa-ttl" id="dTestaTtl"></span>
+    </div>
     <div id="dBody"></div>
   </aside>
 </div>

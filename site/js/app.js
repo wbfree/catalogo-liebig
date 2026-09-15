@@ -227,8 +227,19 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }));
 
-    $$('[data-close]').forEach(el => el.addEventListener('click', () => $('#drawer').hidden = true));
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#drawer').hidden = true; });
+    $$('[data-close]').forEach(el => el.addEventListener('click', () => chiudiPannello()));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') chiudiPannello(); });
+    // sul telefono il tasto indietro deve chiudere la scheda, non uscire dal sito
+    addEventListener('popstate', () => chiudiPannello(true));
+
+    /* Su schermo stretto i filtri partono richiusi: aperti occupavano da soli
+       tre schermate prima di arrivare al catalogo. Legato alla media query e
+       non al solo caricamento, altrimenti ruotando il telefono o allargando
+       la finestra si resterebbe con la scelta sbagliata. */
+    const stretto = matchMedia('(max-width:640px)');
+    const adattaFiltri = () => { $('#fAcc').open = !stretto.matches; };
+    adattaFiltri();
+    stretto.addEventListener('change', adattaFiltri);
   }
 
   function reset() {
@@ -271,10 +282,21 @@
       return desc ? y - x : x - y;
     });
 
+    contaFiltri();
     const tot = VIEW.reduce((a, s) => a + (s.p_med || 0), 0);
     $('#count').innerHTML = `<b>${VIEW.length.toLocaleString('it-IT')}</b> serie corrispondono ai filtri · valore complessivo delle quotazioni <b>${eur0(tot)}</b>` +
       (VIEW.length ? ` · mediana <b>${eur(median(VIEW.map(s => s.p_med)))}</b>` : '');
     renderTable();
+  }
+
+  /* quanti filtri sono attivi: con il pannello richiuso e' l'unico modo per
+     accorgersi che il catalogo e' filtrato */
+  function contaFiltri() {
+    const n = state.bands.size + state.rars.size + state.srcs.size + state.eds.size + state.owns.size
+      + (state.onlyAuct ? 1 : 0) + (state.q ? 1 : 0)
+      + (state.pmin != null ? 1 : 0) + (state.pmax != null ? 1 : 0)
+      + (state.y1 !== 1872 || state.y2 !== 1975 ? 1 : 0);
+    $('#fQuanti').textContent = n ? ` · ${n} attiv${n === 1 ? 'o' : 'i'}` : '';
   }
 
   const median = a => { const v = a.filter(x => x != null).sort((p, q) => p - q); if (!v.length) return null; const m = v.length >> 1; return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
@@ -319,6 +341,23 @@
       e.target.closest('tr').classList.toggle('mine', e.target.checked);
       if (state.owns.size === 1) apply();
     }));
+  }
+
+  /* ------------------------------------------------------------------ pannello */
+  function apriPannello() {
+    const giaAperto = !$('#drawer').hidden;
+    $('#drawer').hidden = false;
+    document.body.classList.add('bloccato');
+    $('.drawer-in').scrollTop = 0;
+    // una voce di cronologia sola, cosi' un indietro chiude e basta
+    if (!giaAperto) history.pushState({ scheda: true }, '');
+  }
+
+  function chiudiPannello(daCronologia) {
+    if ($('#drawer').hidden) return;
+    $('#drawer').hidden = true;
+    document.body.classList.remove('bloccato');
+    if (!daCronologia && history.state && history.state.scheda) history.back();
   }
 
   /* ------------------------------------------------------------------ dettaglio */
@@ -402,7 +441,8 @@
     });
     fld('#dAlbum', 'album'); fld('#dPag', 'pagina'); fld('#dNote', 'note');
 
-    $('#drawer').hidden = false;
+    $('#dTestaTtl').textContent = `${s.num} · ${s.titolo}`;
+    apriPannello();
     // le due letture sono asincrone: se nel frattempo si apre un'altra serie,
     // il risultato in ritardo viene scartato
     const token = ++openDrawer.token;
