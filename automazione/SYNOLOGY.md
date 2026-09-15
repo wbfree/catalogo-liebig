@@ -79,6 +79,27 @@ Il codice del progetto **non** entra nell'immagine, arriva dal volume montato: q
 aggiorni il repository con `git pull` non devi ricostruire nulla. La ricostruzione serve
 solo se cambi le versioni di `psycopg` o `requests` nel `Dockerfile`.
 
+### Il `git pull` sul NAS non deve trovare conflitti
+
+L'aggiornamento notturno riscrive `ebay_active.json` nella radice del repository. Finche'
+quel file era versionato, ogni `git pull` sul NAS si fermava con «le modifiche locali
+verrebbero sovrascritte»: la copia del NAS era sempre diversa da quella del repository.
+Dal 15 settembre 2026 il file e' in `.gitignore` e non e' piu' tracciato, quindi il
+problema non si ripresenta.
+
+Se il tuo NAS viene da prima di quella data, una volta sola:
+
+```bash
+cd /volume1/docker/catalogo-liebig && git checkout -- ebay_active.json && git pull
+```
+
+Il primo comando rimette la versione del repository al posto di quella prodotta dal NAS,
+cosi' il pull puo' rimuovere il file; la raccolta successiva lo ricrea. Se il pull si
+lamenta di altri file prodotti dall'esecuzione, `git checkout -- .` li riporta tutti allo
+stato del repository — attenzione che quel comando butta via **qualsiasi** modifica
+locale, quindi usalo solo sul NAS, che e' una copia di distribuzione e non un posto dove
+si lavora.
+
 ## 3. Prova a mano
 
 Prima di pianificare, esegui una volta guardando cosa succede:

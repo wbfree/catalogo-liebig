@@ -57,7 +57,7 @@ requirements.txt           dipendenze Python
 AGGIORNAMENTO_GIORNALIERO.md  procedura di aggiornamento quotidiano
 afil_rows.json             tavola di concordanza delle serie (6.544 righe)
 mlc_all.json               elenco di riferimento complementare (354 voci)
-ebay_active.json           ultimo rilevamento delle inserzioni attive (11.448 inserzioni)
+ebay_active.json           ultima raccolta da eBay (non versionata: la rigenera aggiorna.sh)
 sorgenti_ritirate/         rilevamenti non più usati dalla pipeline, tenuti per ricostruzione
 DATI.md                    documentazione di ogni file di dati: contenuto, origine, ruolo
 ```

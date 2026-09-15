@@ -6,3 +6,10 @@ storico/
 .env.*
 !.env.example
 log/
+
+# Prodotto dalla raccolta, non sorgente: il NAS lo riscrive ogni notte e, finche'
+# era tracciato, ogni git pull lassu' finiva in conflitto. Non serve nel
+# repository: aggiorna.sh lo rigenera prima di ogni pubblicazione, e le copie
+# datate restano in storico/.
+ebay_active.json
+*.json.tmp

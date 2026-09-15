@@ -32,8 +32,11 @@ sorgenti nella propria directory.
   venditore e per titolo, al prezzo più basso, con aste e compralo subito tenuti separati
   (1.146 righe su 11.448, in larga parte di un solo negozio). Serve il campo `venditore`,
   quindi sui rilevamenti archiviati prima del 15 settembre 2026 non succede nulla.
-- **Aggiornamento**: ogni mattina. Il rilevamento presente nel repository è quello del
-  15 settembre 2026.
+- **Aggiornamento**: ogni mattina, come primo passo di `automazione/aggiorna.sh`.
+- **Non è versionato.** È un prodotto della raccolta, non una sorgente, e il NAS lo
+  riscrive ogni notte: finché era tracciato, ogni `git pull` lassu' finiva in conflitto.
+  Su una copia nuova del repository il file non c'è e non serve: la raccolta lo crea
+  prima che `build_dataset.py` lo legga. Le copie datate restano in `storico/`.
 
 ### `mlc_all.json` — elenco di riferimento complementare
 - **Contenuto**: 354 voci con campi `num`, `titolo`, `anno`, `ed`, `img`, `id`.
