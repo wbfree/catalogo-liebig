@@ -45,7 +45,6 @@ supabase/
 build_dataset.py           pipeline: sorgenti -> database Supabase
 automazione/
   raccolta_ebay_api.py     raccolta delle inserzioni con la Browse API di eBay
-  raccolta_ebay.py         riserva: le stesse pagine lette con un browser
   aggiorna.sh              i due passi in sequenza, dentro il contenitore
   nas_job.sh               involucro per il Task Scheduler: log ed esito
   Dockerfile               immagine con Python, psycopg e requests
@@ -53,7 +52,6 @@ automazione/
   SYNOLOGY.md              installazione e pianificazione su Synology
   genera_icone.py          icone della PWA, rifacibili da script
   stato.json               stato dell'ultima esecuzione della procedura pianificata
-parse_pages.py             parser di pagine eBay salvate su file
 requirements.txt           dipendenze Python
 .env                       credenziali Supabase (non versionato; vedi .env.example)
 AGGIORNAMENTO_GIORNALIERO.md  procedura di aggiornamento quotidiano

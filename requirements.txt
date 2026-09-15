@@ -2,7 +2,3 @@
 psycopg[binary]>=3.2
 # raccolta delle inserzioni con la Browse API di eBay
 requests>=2.31
-# solo per la riserva a browser (automazione/raccolta_ebay.py) e per
-# parse_pages.py: non servono al funzionamento normale
-playwright==1.47.0
-beautifulsoup4>=4.12

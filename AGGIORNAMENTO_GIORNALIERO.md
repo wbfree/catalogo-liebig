@@ -24,23 +24,16 @@ Quattordici chiavi di ricerca piu' una passata dedicata alle aste, fino a 10 pag
 `ebay_active.json` nella radice in modo atomico e mette una copia del rilevamento
 precedente in `storico/`.
 
-Rispetto alla lettura delle pagine con un browser, che si faceva prima, cambia parecchio:
-
-| | Browser | Browse API |
-|---|---|---|
-| Durata | 25-30 minuti | ~90 secondi |
-| Inserzioni raccolte | 9.609 | 11.501 |
-| Aste individuate | 89 | 1.347 |
-| Blocchi | 403, captcha | nessuno |
+In cifre: circa 90 secondi per 11.501 inserzioni, di cui 1.347 aste, senza 403 ne'
+captcha.
 
 Le aste meritano una nota: la ricerca per pertinenza non le fa quasi mai emergere, per
 questo lo script fa una passata a parte con `filter=buyingOptions:{AUCTION}`. Senza,
 il monitoraggio aste resterebbe quasi vuoto.
 
-L'API fornisce inoltre **esatti** i dati che prima venivano dedotti con espressioni
-regolari sul testo dell'inserzione: formato asta, numero di offerte e spedizione
-gratuita. `build_dataset.py` li usa quando ci sono e ricade sulle vecchie regole per i
-rilevamenti storici.
+L'API fornisce **esatti** formato asta, numero di offerte e spedizione gratuita.
+`build_dataset.py` li usa quando ci sono e ricade sulle regole a espressioni regolari
+per i rilevamenti storici, dove quei campi non c'erano.
 
 Opzioni: `--pagine N` per la profondita', `--minimo N` per la soglia sotto la quale la
 raccolta e' considerata fallita (3.000 per impostazione predefinita; in quel caso il file
@@ -49,12 +42,6 @@ altrove e confrontare senza toccare il rilevamento buono.
 
 Le inserzioni **concluse** non sono raccolte: servirebbero permessi che il keyset
 standard non ha.
-
-### Riserva: lettura delle pagine con un browser
-
-`automazione/raccolta_ebay.py` fa la stessa cosa con Playwright, ed e' conservato nel
-caso l'accesso all'API venga meno. Richiede pero' Chromium nell'immagine, che dalla
-versione 2 non c'e' piu': vedi [automazione/SYNOLOGY.md](automazione/SYNOLOGY.md).
 
 ## 2. Ricostruzione del dataset
 

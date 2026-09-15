@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 """Raccoglie le inserzioni Liebig attive con la Browse API di eBay.
 
-Alternativa a raccolta_ebay.py, che legge le pagine con un browser: qui si usa
-l'API ufficiale, quindi niente Chromium, niente 403, niente selettori che
-cambiano, e pochi secondi invece di mezz'ora.
+Si usa l'API ufficiale: niente 403, niente selettori che cambiano quando eBay
+rifa' le proprie pagine, e un minuto e mezzo per l'intera raccolta.
 
 Servono EBAY_CLIENT_ID e EBAY_CLIENT_SECRET nel file .env (keyset di
 produzione, non sandbox).
 
     python automazione/raccolta_ebay_api.py [--pagine 10] [--minimo 3000]
 
-Scrive ebay_active.json nella radice, nello stesso formato del raccoglitore a
-browser piu' alcuni campi strutturati (asta, offerte, spedizione) che l'API
-fornisce esatti e che prima venivano dedotti da espressioni regolari sul testo.
+Scrive ebay_active.json nella radice: per ogni inserzione i campi {t,p,r,u}
+piu' alcuni campi strutturati (asta, offerte, spedizione) che l'API fornisce
+esatti.
 """
 import argparse, base64, datetime, json, os, pathlib, shutil, sys, time
 import requests
@@ -73,7 +72,7 @@ def eur(valore):
     return f"EUR {migliaia},{decimali}"
 
 def converti(it):
-    """Da item_summary dell'API al formato del raccoglitore a browser.
+    """Da item_summary dell'API al formato di ebay_active.json.
 
     I campi t/p/r/u restano per compatibilita' con i rilevamenti vecchi; asta,
     offerte e sped arrivano invece strutturati e non piu' dedotti dal testo.

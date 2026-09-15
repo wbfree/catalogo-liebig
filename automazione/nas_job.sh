@@ -55,7 +55,7 @@ rm -f "$ERRORE"
 # del compose (il Dockerfile accanto, il repository in ..) sono corretti
 # perche' siamo gia' nella cartella giusta.
 if [ -z "$IMMAGINE" ]; then
-    echo "Immagine assente: la costruisco (diversi minuti, scarica Chromium)." | tee -a "$LOG"
+    echo "Immagine assente: la costruisco (meno di un minuto)." | tee -a "$LOG"
     STATO_BUILD="$(mktemp)"
     { $COMPOSE build 2>&1; echo $? > "$STATO_BUILD"; } | tee -a "$LOG"
     ESITO_BUILD="$(cat "$STATO_BUILD")"

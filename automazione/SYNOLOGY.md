@@ -1,9 +1,8 @@
 # Aggiornamento giornaliero su Synology DS218+
 
-Dalla versione 2 la raccolta usa la **Browse API di eBay** invece di un browser: niente
-Chromium, immagine di poche decine di MB, costruzione in meno di un minuto e
-aggiornamento completo in circa due. Sul DS218+ (Celeron J3355, 2 GB) il lavoro e'
-diventato trascurabile.
+La raccolta usa la **Browse API di eBay**: immagine di poche decine di MB, costruzione
+in meno di un minuto e aggiornamento completo in circa due. Sul DS218+ (Celeron J3355,
+2 GB) il lavoro e' trascurabile.
 
 Servono le chiavi eBay in `.env`: `EBAY_CLIENT_ID` e `EBAY_CLIENT_SECRET`, dal keyset di
 **produzione**.
@@ -49,8 +48,8 @@ chmod 600 /volume1/docker/catalogo-liebig/.env
 **Non serve fare niente a mano.** Alla prima esecuzione `nas_job.sh` si accorge che
 l'immagine non c'e' e la costruisce da solo. Salta al passo 4, crea il compito
 pianificato e premi **Run** dalla GUI del Task Scheduler: la prima esecuzione costruisce
-e poi aggiorna. Ci vogliono diversi minuti in piu' perche' scarica Chromium; l'immagine
-occupa circa 1,5 GB.
+e poi aggiorna. La costruzione sta sotto il minuto e l'immagine occupa poche decine
+di MB.
 
 ### Perche' non il Progetto di Container Manager
 
@@ -78,7 +77,7 @@ cd /volume1/docker/catalogo-liebig/automazione && /usr/local/bin/docker compose 
 
 Il codice del progetto **non** entra nell'immagine, arriva dal volume montato: quando
 aggiorni il repository con `git pull` non devi ricostruire nulla. La ricostruzione serve
-solo se cambi le versioni di `psycopg` o `playwright` nel `Dockerfile`.
+solo se cambi le versioni di `psycopg` o `requests` nel `Dockerfile`.
 
 ## 3. Prova a mano
 
@@ -88,7 +87,7 @@ Prima di pianificare, esegui una volta guardando cosa succede:
 cd /volume1/docker/catalogo-liebig/automazione && /usr/local/bin/docker compose run --rm aggiornamento
 ```
 
-Dura circa 25-30 minuti. Alla fine devi vedere le due righe di riepilogo: quante
+Dura un paio di minuti. Alla fine devi vedere le due righe di riepilogo: quante
 inserzioni sono state raccolte e quale rilevamento e' stato scritto.
 
 Per una prova piu' corta, meno pagine per query:
@@ -159,55 +158,20 @@ Il sintomo e' riconoscibile: il job dura un secondo e si ferma subito dopo la ri
 
 ### La raccolta sembra ferma
 
-Con la Browse API non dovrebbe succedere: l'intera raccolta dura circa 90 secondi e ogni
-chiave lascia una riga. Se invece stai usando la riserva a browser e non compaiono righe
-con la CPU vicina allo zero, non e' lentezza ma attesa. Per capire dove:
-
-```bash
-cd /volume1/docker/catalogo-liebig/automazione
-/usr/local/bin/docker compose run --rm --entrypoint python aggiornamento     automazione/raccolta_ebay.py --diagnosi
-```
-
-Prova un pezzo alla volta cronometrando: DNS, connessione a eBay, avvio di Chromium,
-apertura della scheda, caricamento della home, caricamento di una pagina di ricerca ed
-estrazione. La prima riga che si ferma o fallisce dice dove e' il problema.
+L'intera raccolta dura circa 90 secondi e ogni chiave di ricerca lascia una riga nel log:
+finche' le righe scorrono sta lavorando. Se si ferma prima ancora della riga "token
+ottenuto", il problema non e' la raccolta ma cio' che viene prima.
 
 | Dove si ferma | Cosa vuol dire |
 |---|---|
-| DNS o connessione TCP | il container non ha rete o non risolve i nomi |
-| avvio di Chromium | dipendenze mancanti nell'immagine, oppure `/dev/shm` troppo piccolo |
-| caricamento delle pagine | eBay non risponde da quell'indirizzo IP |
-| estrazione a zero inserzioni | i selettori sono cambiati, o eBay serve una pagina di blocco |
+| errore sul token | `EBAY_CLIENT_ID` o `EBAY_CLIENT_SECRET` mancanti in `.env`, oppure di sandbox invece che di produzione |
+| errore di risoluzione o di connessione | il contenitore non ha rete o non risolve i nomi |
 
-Con la CPU a zero e nessuna riga di log, guarda anche se il container e' davvero vivo:
+Con la CPU a zero e nessuna riga di log, guarda anche se il contenitore e' davvero vivo:
 
 ```bash
 /usr/local/bin/docker stats --no-stream
 /usr/local/bin/docker ps
-```
-
-### La costruzione dell'immagine fallisce sui font
-
-```
-E: Package 'ttf-unifont' has no installation candidate
-E: Package 'ttf-ubuntu-font-family' has no installation candidate
-Failed to install browsers
-```
-
-`playwright install --with-deps` sta cercando pacchetti **Ubuntu** su una base **Debian**.
-Succede quando la versione di Debian dell'immagine di base e' piu' recente di quelle che
-quella versione di Playwright conosce: ripiega sull'elenco Ubuntu, dove i font si chiamano
-`ttf-*` invece di `fonts-*`.
-
-Per questo il `Dockerfile` appunta `python:3.12-slim-bookworm` e non `python:3.12-slim`:
-il secondo oggi e' Debian 13 (trixie), che Playwright 1.47 non riconosce. Se alzi la
-versione di Playwright, guarda prima quali distribuzioni conosce, in
-`playwright/driver/package/lib/server/registry/nativeDeps.js`.
-
-Dopo aver corretto il `Dockerfile` la costruzione va rifatta da zero:
-
-```bash
-cd /volume1/docker/catalogo-liebig/automazione && /usr/local/bin/docker compose build --no-cache
 ```
 
 ## 5. Quando qualcosa va storto
@@ -256,25 +220,7 @@ settimana di inattivita'**. Finche' il job gira ogni giorno il progetto resta
 sveglio da solo; se spegni il NAS per una vacanza lunga, al ritorno potresti
 dover riattivare il progetto dal pannello prima che il sito torni a caricare.
 
-## 7. Tornare alla riserva a browser
-
-`automazione/raccolta_ebay.py` legge le pagine con Playwright ed e' conservato nel caso
-l'accesso all'API venga meno. Non funziona con l'immagine attuale, che non contiene
-Chromium. Per usarlo servono due modifiche al `Dockerfile`:
-
-```dockerfile
-FROM python:3.12-slim-bookworm
-RUN pip install --no-cache-dir "psycopg[binary]>=3.2" "playwright==1.47.0"  && playwright install --with-deps chromium
-```
-
-La base **deve** essere `bookworm` e non `python:3.12-slim`: quest'ultimo e' Debian 13
-(trixie), che Playwright 1.47 non riconosce, e la costruzione muore cercando pacchetti
-Ubuntu (`ttf-unifont`). Vanno rimessi anche `shm_size: '1gb'` nel compose, perche' i
-64 MB predefiniti di `/dev/shm` fanno morire Chromium, e un `mem_limit` piu' alto.
-
-Poi in `aggiorna.sh` si sostituisce `raccolta_ebay_api.py` con `raccolta_ebay.py`.
-
-## 8. L'applicazione installabile (PWA)
+## 7. L'applicazione installabile (PWA)
 
 Il sito si installa sul telefono: si aggiunge alla schermata iniziale, si apre a schermo
 intero senza barra del browser e resta consultabile senza rete, mostrando l'ultimo

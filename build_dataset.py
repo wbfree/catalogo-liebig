@@ -3,7 +3,7 @@
 
 Input:
   afil_rows.json  -> tabella serie (numerazione Sanguinetti / Unificato / De Magistris / CIL)
-  ebay_active.json -> inserzioni eBay.it attive rilevate via browser
+  ebay_active.json -> inserzioni eBay.it attive rilevate con la Browse API di eBay
 Output:
   database Supabase (tabelle serie / rilevamenti / quotazioni / inserzioni)
 

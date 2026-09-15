@@ -1,13 +1,8 @@
 # Immagine per l'aggiornamento giornaliero del catalogo.
 #
-# Da quando la raccolta usa la Browse API di eBay non serve piu' un browser:
-# niente Chromium, niente dipendenze di sistema, niente /dev/shm da allargare.
-# L'immagine e' passata da circa 1,5 GB a poche decine di MB e si costruisce
-# in meno di un minuto anche sul Celeron del DS218+.
-#
-# Se un giorno servisse tornare al raccoglitore a browser
-# (automazione/raccolta_ebay.py, tenuto come riserva), quello richiede
-# playwright e una base Debian che Playwright riconosca: vedi SYNOLOGY.md.
+# La raccolta parla con la Browse API di eBay, quindi qui dentro non serve
+# altro che Python e due librerie: poche decine di MB, e la costruzione sta
+# sotto il minuto anche sul Celeron del DS218+.
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \

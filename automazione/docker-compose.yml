@@ -16,6 +16,6 @@ services:
       # tutto il repository, cosi' il contenitore legge .env e le sorgenti
       # e riscrive ebay_active.json e storico/ direttamente sul NAS
       - ..:/app
-    # senza Chromium il consumo e' trascurabile: bastano per larghezza
+    # il lavoro e' tutto rete e JSON: 512 MB bastano con abbondanza
     mem_limit: 512m
     restart: "no"
