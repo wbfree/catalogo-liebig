@@ -77,9 +77,16 @@ al massimo uno corrente.
 ### `quotazioni` — i prezzi, per serie e per rilevamento
 Una riga per serie per rilevamento: mediana, minimo, massimo, stima da comparabili,
 scostamento, fasce, numero di offerte e di aste, punteggio e classe di rarità.
-**Non viene mai potata**: è l'archivio storico delle quotazioni, quello che prima si
-perdeva ogni giorno con la cartella `storico/`. Da qui nasce il grafico di andamento nella
-scheda di ogni serie.
+È l'archivio storico delle quotazioni, quello che prima si perdeva ogni giorno con la
+cartella `storico/`. Da qui nasce il grafico di andamento nella scheda di ogni serie.
+
+**Viene diradata, non potata.** Un rilevamento sono 1.871 righe, circa 390 kB con i suoi
+indici: tenerli tutti fa 140 MB l'anno e il piano gratuito di Supabase si ferma a 500 MB.
+Più si va indietro, meno serve il dettaglio giornaliero, quindi ogni pubblicazione tiene
+tutti i rilevamenti degli ultimi `GIORNI_STORICO_FITTO` giorni (90), poi il primo di ogni
+settimana fino a `GIORNI_STORICO_SETTIMANALE` (730), poi il primo di ogni mese. Il
+rilevamento corrente non viene mai toccato. Dopo tre anni sono 195 rilevamenti invece di
+1.096: 75 MB invece di 419. Dopo dieci anni lo storico è ancora sotto i 110 MB.
 
 ### `inserzioni` — gli annunci abbinati
 Gli annunci eBay abbinati a una serie, con titolo, prezzo, URL, formato asta, se è una

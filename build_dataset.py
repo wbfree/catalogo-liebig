@@ -14,8 +14,16 @@ import psycopg
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 # quanti rilevamenti passati conservano anche le singole inserzioni
-# (lo storico delle quotazioni non viene mai potato)
 RILEVAMENTI_CON_INSERZIONI = 7
+
+# Diradamento dello storico delle quotazioni. Ogni rilevamento costa circa
+# 390 kB (1.871 righe con i loro indici): tenerli tutti fa 140 MB l'anno, e il
+# piano gratuito di Supabase si ferma a 500 MB. Piu' si va indietro, meno
+# serve il dettaglio giornaliero: nei primi mesi si tiene tutto, poi un punto
+# a settimana, poi uno al mese. Cosi' lo storico si stabilizza sotto i 100 MB
+# anche dopo dieci anni, e il grafico di una serie resta leggibile.
+GIORNI_STORICO_FITTO = 90      # entro questi giorni si tiene ogni rilevamento
+GIORNI_STORICO_SETTIMANALE = 730   # fin qui uno a settimana, oltre uno al mese
 
 # ---------------------------------------------------------------- serie
 def anno_int(s):
@@ -300,15 +308,38 @@ def scrivi_supabase(serie, meta, soglia=0.6, forza=False):
         cur.execute("update public.rilevamenti set corrente = false where corrente")
         cur.execute("update public.rilevamenti set corrente = true where id = %s", (rid,))
 
-        # 6. potatura: lo storico delle quotazioni resta, le inserzioni no
+        # 6. potatura delle inserzioni: invecchiano subito e sono la tabella
+        # piu' pesante, si tengono solo quelle degli ultimi rilevamenti
         potati = cur.execute("""
             delete from public.inserzioni where rilevamento_id in (
                 select id from public.rilevamenti order by data desc, id desc
                 offset %s) returning 1""", (RILEVAMENTI_CON_INSERZIONI,)).rowcount
+
+        # 7. diradamento dello storico: dei rilevamenti vecchi si tiene il
+        # primo di ogni settimana, e piu' indietro il primo di ogni mese.
+        # Le quotazioni se ne vanno in cascata: e' li' che sta il peso.
+        diradati = cur.execute("""
+            with secchi as (
+                select id, corrente,
+                       case when data > current_date - %s then null
+                            when data > current_date - %s then date_trunc('week',  data)::date
+                            else                               date_trunc('month', data)::date
+                       end as secchio,
+                       data
+                  from public.rilevamenti
+            ), numerati as (
+                select id, corrente, secchio,
+                       row_number() over (partition by secchio order by data, id) as posizione
+                  from secchi where secchio is not null
+            )
+            delete from public.rilevamenti
+             where id in (select id from numerati where posizione > 1 and not corrente)
+            returning 1""", (GIORNI_STORICO_FITTO, GIORNI_STORICO_SETTIMANALE)).rowcount
         conn.commit()
 
     print(f"rilevamento {rid} del {oggi}: {len(serie)} quotazioni, {n_ins} inserzioni"
-          + (f", potate {potati} inserzioni di rilevamenti vecchi" if potati > 0 else ""))
+          + (f", potate {potati} inserzioni di rilevamenti vecchi" if potati > 0 else "")
+          + (f", diradati {diradati} rilevamenti dello storico" if diradati > 0 else ""))
 
 
 def main(soglia=0.6, forza=False, prova=False):
