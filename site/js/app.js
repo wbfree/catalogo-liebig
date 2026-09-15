@@ -33,6 +33,11 @@
   }
 
   const inSospeso = {};
+  // serie la cui scrittura non e' andata a buon fine: si riprova da sole
+  // appena torna il collegamento, cosi' una spunta messa in cantina non si
+  // perde solo perche' li' non prende
+  const daRisalvare = new Set();
+
   function collSet(n, patch) {
     INV[n] = { ...rec(n), ...patch };
     collStat();
@@ -53,17 +58,29 @@
         }, 'on_conflict=serie_num');
       }
       INV_OK = true;
+      daRisalvare.delete(String(n));
     } catch (e) {
       INV_OK = false;
+      daRisalvare.add(String(n));
       console.error('salvataggio inventario', e);
     }
     collWarn();
   }
 
+  /* Stato del collegamento: l'avviso compare quando si e' offline, e al
+     ritorno della rete le scritture rimaste indietro partono da sole. */
+  function rete() {
+    const off = !navigator.onLine;
+    $('#offline').hidden = !off;
+    if (!off && daRisalvare.size) {
+      [...daRisalvare].forEach(n => invSalva(n));
+    }
+  }
+
   function collWarn() {
     const el = $('#collWarn');
     el.hidden = INV_OK;
-    if (!INV_OK) el.innerHTML = 'Le ultime modifiche alla collezione <b>non sono state salvate</b>: il database non ha risposto. Controlla la connessione; la pagina riproverà al prossimo cambiamento.';
+    if (!INV_OK) el.innerHTML = 'Le ultime modifiche alla collezione <b>non sono ancora state salvate</b>: il database non ha risposto. Restano in attesa e partiranno da sole appena torna il collegamento; non chiudere la pagina nel frattempo.';
   }
 
   function collStat() {
@@ -149,7 +166,9 @@
       return errore('Impossibile caricare i dati del catalogo dal database.');
     }
     try { await invCarica(); } catch (e) { INV_OK = false; console.error('lettura inventario', e); }
-    collWarn();
+    collWarn(); rete();
+    addEventListener('online', rete);
+    addEventListener('offline', rete);
     renderKpis(); bind(); collStat(); apply(); renderMonitor();
   })();
 

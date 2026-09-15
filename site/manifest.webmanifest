@@ -1,0 +1,19 @@
+{
+  "name": "Catalogo Liebig — tutte le serie 1872-1975",
+  "short_name": "Liebig",
+  "description": "Catalogo delle 1.871 serie di figurine Liebig con numerazione Sanguinetti, quotazioni di mercato, rarità relativa e inventario personale.",
+  "lang": "it",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f6f1e7",
+  "theme_color": "#f6f1e7",
+  "categories": ["reference", "shopping", "utilities"],
+  "icons": [
+    { "src": "icone/icona-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icone/icona-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icone/icona-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

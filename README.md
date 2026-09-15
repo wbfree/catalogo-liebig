@@ -17,13 +17,19 @@ Sito pubblico: **https://liebig.pplx.app**
   solo inventario, e chi raggiunge l'indirizzo del sito può modificarlo.
 - **Storico delle quotazioni**: ogni rilevamento resta in archivio, e la scheda di una
   serie mostra l'andamento del prezzo mediano nel tempo.
+- **Installabile sul telefono**: si aggiunge alla schermata iniziale, si apre a schermo
+  intero e resta consultabile anche senza rete, mostrando l'ultimo catalogo scaricato. Le
+  modifiche alla collezione fatte offline partono da sole quando torna il collegamento.
 - **Filtri** per fascia di prezzo, intervallo personalizzato, anno, rarità, edizione italiana, tipo di dato di prezzo e presenza di aste in corso.
 
 ## Struttura
 
 ```
-site/                      sito statico: legge i dati da Supabase, nessun backend proprio
+site/                      applicazione statica: legge i dati da Supabase, nessun backend proprio
   index.html
+  manifest.webmanifest     descrittore dell'applicazione installabile
+  sw.js                    service worker: guscio in cache e catalogo leggibile offline
+  icone/                   icone dell'applicazione, generate da automazione/genera_icone.py
   css/app.css
   js/config.js             indirizzo del progetto Supabase e chiave pubblica anon
   js/db.js                 client PostgREST minimo
@@ -41,6 +47,7 @@ automazione/
   Dockerfile               immagine con Python, psycopg e requests
   docker-compose.yml       esecuzione sul NAS
   SYNOLOGY.md              installazione e pianificazione su Synology
+  genera_icone.py          icone della PWA, rifacibili da script
   stato.json               stato dell'ultima esecuzione della procedura pianificata
 parse_pages.py             parser di pagine eBay salvate su file
 requirements.txt           dipendenze Python

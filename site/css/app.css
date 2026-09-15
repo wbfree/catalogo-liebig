@@ -304,3 +304,15 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--oxblood-2); outline-o
 .d-storico{margin:var(--space-3) 0 var(--space-2); min-height:42px}
 .d-storico canvas{max-width:100%}
 .d-attesa{margin:0; font-size:var(--text-sm); color:var(--ink-3)}
+
+/* ------------------------------------------------- assenza di rete / PWA */
+.offline{
+  margin:var(--space-3) 0 0; padding:var(--space-3) var(--space-4);
+  border:1px solid #d7b25a; border-left-width:3px; border-radius:var(--radius);
+  background:#fdf7e6; color:#6b5720; font-size:var(--text-sm);
+}
+/* telefoni con angoli o tacca: si evita che il contenuto finisca sotto */
+body{
+  padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);
+}
+.foot{padding-bottom:calc(var(--space-8) + env(safe-area-inset-bottom))}

@@ -256,3 +256,49 @@ Ubuntu (`ttf-unifont`). Vanno rimessi anche `shm_size: '1gb'` nel compose, perch
 64 MB predefiniti di `/dev/shm` fanno morire Chromium, e un `mem_limit` piu' alto.
 
 Poi in `aggiorna.sh` si sostituisce `raccolta_ebay_api.py` con `raccolta_ebay.py`.
+
+## 8. L'applicazione installabile (PWA)
+
+Il sito si installa sul telefono: si aggiunge alla schermata iniziale, si apre a schermo
+intero senza barra del browser e resta consultabile senza rete, mostrando l'ultimo
+catalogo scaricato. Serve pero' che il server rispetti due condizioni.
+
+### HTTPS obbligatorio
+
+I service worker funzionano **solo** su HTTPS (l'unica eccezione e' `localhost`). Se il
+sito e' pubblicato in semplice HTTP, il browser ignora `sw.js` in silenzio: le pagine si
+vedono, ma niente installazione e niente funzionamento offline. Vale sia con Cloudflare
+Tunnel, che l'HTTPS ce l'ha di suo, sia con il certificato Let's Encrypt su Web Station.
+
+### Tipo MIME corretto per i .js
+
+Il file `sw.js` va servito come `text/javascript` o `application/javascript`. Se arriva
+come `text/plain` il browser lo rifiuta con
+
+```
+An unknown error occurred when fetching the script
+```
+
+Nginx di Web Station lo fa correttamente. Per controllare dal telefono o dal computer:
+
+```bash
+curl -sI https://IL_TUO_INDIRIZZO/sw.js | grep -i content-type
+```
+
+### Come verificare che sia installata
+
+Aprendo il sito da Chrome su Android compare l'invito «Aggiungi a schermata Home»; su
+iPhone si usa Condividi, poi «Aggiungi alla schermata Home». Dopo l'installazione,
+mettendo il telefono in modalita' aereo l'applicazione deve aprirsi lo stesso e mostrare
+l'ultimo catalogo, con l'avviso giallo che segnala l'assenza di rete.
+
+Attenzione: la **prima** apertura scarica e mette in cache; il catalogo diventa leggibile
+offline dalla **seconda**. E' il funzionamento normale, non un difetto: alla prima visita
+il service worker si attiva dopo che la pagina ha gia' chiesto i dati.
+
+### Quando cambia il codice
+
+`sw.js` contiene una costante `VERSIONE`. Cambiandola (`liebig-v1` -> `liebig-v2`) le
+cache vecchie vengono buttate al primo caricamento successivo. Se modifichi CSS o
+JavaScript e sul telefono continui a vedere la versione vecchia, e' quella la riga da
+toccare.
