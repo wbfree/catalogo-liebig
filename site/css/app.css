@@ -457,3 +457,10 @@ body.bloccato{overflow:hidden}
   .more{margin-top:var(--space-2)}
   .more .btn{width:100%}
 }
+
+/* la ricerca libera resta sempre in vista, sopra ai filtri richiudibili */
+.f-cerca{margin-bottom:var(--space-4)}
+@media (max-width:640px){
+  .f-cerca{margin-bottom:var(--space-2)}
+  .f-cerca input{min-height:44px; font-size:16px}  /* 16px: sotto, iOS ingrandisce la pagina */
+}

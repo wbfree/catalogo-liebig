@@ -290,10 +290,11 @@
   }
 
   /* quanti filtri sono attivi: con il pannello richiuso e' l'unico modo per
-     accorgersi che il catalogo e' filtrato */
+     accorgersi che il catalogo e' filtrato. La ricerca libera non si conta,
+     perche' e' sempre in vista. */
   function contaFiltri() {
     const n = state.bands.size + state.rars.size + state.srcs.size + state.eds.size + state.owns.size
-      + (state.onlyAuct ? 1 : 0) + (state.q ? 1 : 0)
+      + (state.onlyAuct ? 1 : 0)
       + (state.pmin != null ? 1 : 0) + (state.pmax != null ? 1 : 0)
       + (state.y1 !== 1872 || state.y2 !== 1975 ? 1 : 0);
     $('#fQuanti').textContent = n ? ` · ${n} attiv${n === 1 ? 'o' : 'i'}` : '';

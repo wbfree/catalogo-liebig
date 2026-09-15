@@ -54,13 +54,16 @@
     <div class="kpis" id="kpis"></div>
 
     <div class="panel filters">
+      <!-- la ricerca sta fuori dal blocco richiudibile: e' il comando che si usa
+           piu' spesso, e su telefono restava sepolto sotto i filtri chiusi -->
+      <div class="field grow f-cerca">
+        <label for="q">Ricerca libera</label>
+        <input id="q" type="search" placeholder="Titolo, numero Sanguinetti, anno…" autocomplete="off">
+      </div>
+
      <details class="f-acc" id="fAcc" open>
-      <summary class="f-somm">Ricerca e filtri<span class="f-quanti" id="fQuanti"></span></summary>
+      <summary class="f-somm">Filtri<span class="f-quanti" id="fQuanti"></span></summary>
       <div class="f-row">
-        <div class="field grow">
-          <label for="q">Ricerca libera</label>
-          <input id="q" type="search" placeholder="Titolo, numero Sanguinetti, anno…" autocomplete="off">
-        </div>
         <div class="field">
           <label for="sort">Ordina per</label>
           <select id="sort">
