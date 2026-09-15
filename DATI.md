@@ -120,6 +120,7 @@ metodo di raccolta. È un'istantanea di riferimento, non un file letto dalla pip
 - `storico/` — copie datate dei rilevamenti eBay. Non serve più per le quotazioni, che
   ora hanno un archivio proprio nella tabella `quotazioni`.
 - **Inventario personale** — non è più nel browser né nel repository: sta nella tabella
-  `inventario` del database. Il pulsante «Esporta la collezione» continua a produrre un
+  `inventario` del database. La voce «Esporta la collezione» del menu in alto a destra
+  continua a produrre un
   file JSON `collezione-liebig-<data>.json` come backup, e l'importazione accetta sia il
   formato nuovo sia quello delle vecchie esportazioni da cookie.

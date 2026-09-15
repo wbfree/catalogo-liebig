@@ -83,16 +83,24 @@
     if (!INV_OK) el.innerHTML = 'Le ultime modifiche alla collezione <b>non sono ancora state salvate</b>: il database non ha risposto. Restano in attesa e partiranno da sole appena torna il collegamento; non chiudere la pagina nel frattempo.';
   }
 
+  /* I numeri della collezione stanno fra gli indicatori in testa alla pagina,
+     nella stessa griglia di quelli del catalogo: sono la ragione per cui si
+     apre il catalogo tutti i giorni, e in fondo ai filtri non si vedevano.
+     Container separato da #kpis perche' questi si riscrivono a ogni spunta. */
   function collStat() {
     const nums = Object.keys(INV).filter(n => INV[n].posseduta);
     const cat = nums.map(n => SERIE.find(s => s.num === +n)).filter(Boolean);
     const val = cat.reduce((a, s) => a + (s.p_med || 0), 0);
     const loc = nums.filter(n => INV[n].album || INV[n].pagina).length;
-    $('#collStat').innerHTML = nums.length
-      ? `<b>${nums.length.toLocaleString('it-IT')}</b> serie nella tua collezione su ${META.n_serie ? META.n_serie.toLocaleString('it-IT') : '—'} ` +
-        `(${(nums.length / (META.n_serie || 1) * 100).toFixed(1).replace('.', ',')}%) · valore di mercato complessivo <b>${eur0(val)}</b> · ` +
-        `<b>${loc}</b> con collocazione indicata`
-      : "Nessuna serie ancora contrassegnata come tua. Spunta la casella nella colonna <b>Mia</b> per iniziare a costruire l'inventario.";
+    const tot = META.n_serie || 0;
+    const quota = tot ? (nums.length / tot * 100).toFixed(1).replace('.', ',') + '%' : '—';
+    $('#kpisMie').innerHTML = [
+      ['Serie nella mia collezione', nums.length.toLocaleString('it-IT')],
+      ['Copertura del catalogo', quota],
+      ['Valore della collezione', eur0(val)],
+      ['Con collocazione indicata', loc.toLocaleString('it-IT')]
+    ].map(([l, v]) => `<div class="kpi mia"><b>${v}</b><span>${l}</span></div>`).join('');
+    $('#collVuota').hidden = nums.length > 0;
   }
 
   function collExport() {
@@ -213,8 +221,8 @@
     $$('#eds .chip').forEach(b => b.addEventListener('click', () => toggle(b, state.eds, b.dataset.ed)));
     $$('#owns .chip').forEach(b => b.addEventListener('click', () => toggle(b, state.owns, b.dataset.own)));
 
-    $('#collExport').addEventListener('click', collExport);
-    $('#collImportBtn').addEventListener('click', () => $('#collImport').click());
+    $('#collExport').addEventListener('click', () => { collExport(); apriMenu(false); });
+    $('#collImportBtn').addEventListener('click', () => { $('#collImport').click(); apriMenu(false); });
     $('#collImport').addEventListener('change', e => { if (e.target.files[0]) collImport(e.target.files[0]); e.target.value = ''; });
     $('#onlyAuct').addEventListener('click', e => { state.onlyAuct = !state.onlyAuct; e.target.classList.toggle('is-on', state.onlyAuct); apply(); });
     $('#reset').addEventListener('click', reset);

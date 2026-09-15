@@ -49,6 +49,10 @@
         <button class="tab is-on" data-view="catalogo" type="button">Catalogo</button>
         <button class="tab" data-view="monitoraggio" type="button">Monitoraggio eBay</button>
         <button class="tab" data-view="metodo" type="button">Metodo e fonti</button>
+        <hr class="menu-sep">
+        <button class="menu-az" id="collExport" type="button">Esporta la collezione</button>
+        <button class="menu-az" id="collImportBtn" type="button">Importa da file</button>
+        <input type="file" id="collImport" accept="application/json,.json" hidden>
       </div>
     </nav>
   </div>
@@ -60,7 +64,13 @@
   <section id="view-catalogo" class="view">
 
     <p class="stamp" id="stamp"></p>
-    <div class="kpis" id="kpis"></div>
+    <!-- due gruppi nella stessa griglia (display:contents): i numeri del
+         catalogo si scrivono una volta sola, quelli della collezione si
+         riscrivono a ogni spunta -->
+    <div class="kpis">
+      <div class="kpi-gruppo" id="kpis"></div>
+      <div class="kpi-gruppo" id="kpisMie"></div>
+    </div>
 
     <div class="panel filters">
       <!-- la ricerca sta fuori dal blocco richiudibile: e' il comando che si usa
@@ -170,14 +180,9 @@
 
      </details>
 
-      <div class="mycoll" id="mycoll">
-        <p id="collStat">Nessuna serie ancora contrassegnata come tua. Spunta la casella nella colonna <b>Mia</b> per iniziare a costruire l'inventario.</p>
-        <div class="coll-act">
-          <button class="btn sm" id="collExport">Esporta la collezione</button>
-          <button class="btn sm ghost" id="collImportBtn">Importa da file</button>
-          <input type="file" id="collImport" accept="application/json,.json" hidden>
-        </div>
-      </div>
+      <p class="coll-vuota" id="collVuota" hidden>Nessuna serie ancora contrassegnata come tua: spunta la casella
+        nella colonna <b>Mia</b> per iniziare a costruire l'inventario. Esportazione e importazione della collezione
+        stanno nel menu in alto a destra.</p>
       <p class="coll-warn" id="collWarn" hidden></p>
       <p class="offline" id="offline" hidden>Sei senza rete: stai vedendo l'ultimo catalogo
         scaricato. Le modifiche alla collezione verranno salvate appena torna il collegamento.</p>
@@ -323,13 +328,14 @@
         di una serie puoi indicare <b>album</b> e <b>pagina</b> in cui è collocata, più una nota libera per stato di
         conservazione, provenienza o doppioni. Album e pagina compaiono poi direttamente in tabella sotto il titolo,
         e i filtri <b>Serie che possiedo</b> e <b>Serie mancanti</b> permettono di leggere il catalogo come inventario
-        o come lista dei desideri. La barra sopra la tabella riporta quante serie possiedi, la percentuale sul totale e
-        il valore di mercato complessivo della raccolta.</p>
+        o come lista dei desideri. Gli indicatori in testa alla pagina riportano, accanto a quelli del catalogo, quante
+        serie possiedi, la percentuale sul totale, il valore di mercato complessivo della raccolta e quante serie hanno
+        una collocazione indicata.</p>
       <p class="warn">Questi dati sono conservati nel <b>database del catalogo</b>, non più nel browser: si ritrovano
         identici da qualunque dispositivo e non si perdono cancellando i dati di navigazione. Il catalogo è però a
         <b>utente singolo</b> e senza autenticazione: esiste un solo inventario, e chiunque raggiunga questo indirizzo
-        può vederlo e modificarlo. Usa <b>Esporta la collezione</b> per tenerne comunque un backup e
-        <b>Importa da file</b> per ricaricarlo. L'aggiornamento giornaliero delle quotazioni non tocca le tue
+        può vederlo e modificarlo. Nel menu in alto a destra, <b>Esporta la collezione</b> ne tiene un backup e
+        <b>Importa da file</b> lo ricarica. L'aggiornamento giornaliero delle quotazioni non tocca le tue
         annotazioni.</p>
 
       <h3 class="h-min">7. Aggiornamento</h3>

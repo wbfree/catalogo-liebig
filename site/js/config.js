@@ -12,7 +12,7 @@
    il nome delle cache del service worker sia la sigla mostrata in testata,
    cosi' guardando lo schermo si sa quale versione si sta usando. */
 self.LIEBIG_CONFIG = {
-  versione: 10,
+  versione: 11,
   url: 'https://twkhcynefhltiuwlzkqe.supabase.co',
   publishableKey: 'sb_publishable_AGxHKbJgoeyRttmOC4A1CA_XWnIPCG5'
 };

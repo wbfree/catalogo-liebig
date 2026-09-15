@@ -82,6 +82,13 @@ a{color:var(--oxblood); text-underline-offset:2px}
 .kpi b{display:block; font-family:var(--font-display); font-size:var(--text-xl); font-weight:600; line-height:1.1; font-variant-numeric:tabular-nums}
 .kpi span{display:block; font-size:var(--text-xs); text-transform:uppercase; letter-spacing:.07em; color:var(--ink-3); margin-top:var(--space-2)}
 .kpi.accent b{color:var(--oxblood)}
+/* i due gruppi non devono formare un livello: display:contents li rende
+   trasparenti e le carte restano celle della stessa griglia */
+.kpi-gruppo{display:contents}
+/* le carte della collezione si distinguono da quelle del catalogo: sono le
+   uniche che dipendono da cosa possiedi */
+.kpi.mia{border-left:3px solid var(--gold); background:var(--paper)}
+.kpi.mia b{color:var(--ink)}
 
 /* ------------------------------------------------------------ filters */
 .f-row{display:flex; gap:var(--space-5); flex-wrap:wrap; align-items:flex-end; margin-bottom:var(--space-4)}
@@ -240,16 +247,14 @@ abbr{text-decoration:none; cursor:help}
 .tag-ed{border-color:#b9c4ce; background:#eef2f6; color:#4a5a68}
 
 /* ------------------------------------------------------------ la mia collezione */
-.mycoll{
-  display:flex; align-items:center; justify-content:space-between; gap:var(--space-4);
-  flex-wrap:wrap; margin-top:var(--space-4); padding:var(--space-3) var(--space-4);
+/* I numeri stanno fra gli indicatori in testa e i comandi nel menu: qui resta
+   solo la riga che spiega come cominciare, finche' la collezione e' vuota. */
+.coll-vuota{
+  margin:var(--space-4) 0 0; padding:var(--space-3) var(--space-4); border-radius:var(--radius);
   background:var(--paper-2); border:1px solid var(--line-2); border-left:3px solid var(--gold);
-  border-radius:var(--radius);
+  font-size:var(--text-sm); color:var(--ink-2);
 }
-.mycoll p{margin:0; font-size:var(--text-sm); color:var(--ink-2)}
-.mycoll b{font-variant-numeric:tabular-nums; color:var(--ink)}
-.coll-act{display:flex; gap:var(--space-2); flex-wrap:wrap}
-.btn.sm{min-height:34px; padding:var(--space-2) var(--space-3); font-size:var(--text-xs)}
+.coll-vuota[hidden]{display:none}
 .btn.ghost{background:transparent; color:var(--ink-2); border-style:dashed}
 .btn.ghost:hover{background:var(--oxblood); color:#fff; border-style:solid}
 .coll-warn{
@@ -295,10 +300,6 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--oxblood-2); outline-o
 .d-coll input[type=text]:focus-visible, .d-coll textarea:focus-visible{outline:2px solid var(--oxblood-2); outline-offset:2px}
 .d-saved{margin:0; font-size:var(--text-xs); color:var(--ink-3); transition:color .2s}
 .d-saved.ok{color:var(--green); font-weight:500}
-
-@media (max-width:640px){
-  .mycoll{flex-direction:column; align-items:flex-start}
-}
 
 /* ------------------------------------------------- storico in scheda */
 .d-storico{margin:var(--space-3) 0 var(--space-2); min-height:42px}
@@ -575,6 +576,15 @@ body.bloccato{overflow:hidden}
 .menu-voci[hidden]{display:none}
 .menu-voci .tab{text-align:left; min-height:44px; border-radius:var(--radius)}
 .menu-voci .tab.is-on{background:var(--ink); color:var(--paper-2)}
+/* sotto la riga: comandi, non viste. Stesso ingombro delle voci di vista,
+   peso visivo minore. */
+.menu-sep{height:1px; margin:var(--space-2) var(--space-1); border:0; background:var(--line)}
+.menu-az{
+  font:inherit; font-size:var(--text-sm); text-align:left; cursor:pointer;
+  min-height:44px; padding:var(--space-2) var(--space-3);
+  background:none; border:0; border-radius:var(--radius); color:var(--ink-2);
+}
+.menu-az:hover{background:var(--paper); color:var(--oxblood)}
 
 /* sigla di versione accanto al nome: serve a sapere cosa si sta guardando */
 .ver{
