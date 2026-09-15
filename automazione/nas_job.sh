@@ -28,11 +28,33 @@ fi
 
 cd "$RADICE/automazione" || exit 1
 
+# "docker compose version" risponde anche a demone spento o irraggiungibile,
+# quindi il controllo qui sopra non basta: per sapere se si puo' davvero
+# parlare con Docker bisogna chiedergli qualcosa di vero. Senza questa verifica
+# un errore di permessi sul socket verrebbe scambiato per "immagine assente",
+# avviando una costruzione di diversi minuti gia' condannata.
+ERRORE="$(mktemp)"
+IMMAGINE="$($COMPOSE images -q aggiornamento 2>"$ERRORE")"
+ESITO_IMMAGINI=$?
+if [ "$ESITO_IMMAGINI" -ne 0 ]; then
+    {
+        echo "Non riesco a parlare con Docker (codice $ESITO_IMMAGINI):"
+        cat "$ERRORE"
+        echo
+        echo "Se l'errore parla di permessi negati sul socket, il compito sta"
+        echo "girando con un utente qualunque: deve girare come 'root'."
+        echo "Control Panel -> Task Scheduler -> il compito -> Edit -> General -> User: root"
+    } | tee -a "$LOG" >&2
+    rm -f "$ERRORE"
+    exit "$ESITO_IMMAGINI"
+fi
+rm -f "$ERRORE"
+
 # Prima esecuzione: se l'immagine non c'e' la si costruisce qui. Cosi' non
 # serve ne' SSH ne' un progetto di Container Manager, e i percorsi relativi
 # del compose (il Dockerfile accanto, il repository in ..) sono corretti
 # perche' siamo gia' nella cartella giusta.
-if ! $COMPOSE images -q aggiornamento 2>/dev/null | grep -q .; then
+if [ -z "$IMMAGINE" ]; then
     echo "Immagine assente: la costruisco (diversi minuti, scarica Chromium)." | tee -a "$LOG"
     STATO_BUILD="$(mktemp)"
     { $COMPOSE build 2>&1; echo $? > "$STATO_BUILD"; } | tee -a "$LOG"

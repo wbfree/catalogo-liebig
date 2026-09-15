@@ -140,6 +140,23 @@ job sparirebbe senza preavviso.
 L'aggiornamento completo dura un paio di minuti, quindi partendo alle 07:30 il
 rilevamento e' pubblicato entro le 07:35. Non serve che il sito venga ripubblicato: legge i dati dal database.
 
+### Permesso negato sul socket di Docker
+
+Se la posta del Task Scheduler riporta
+
+```
+permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock
+```
+
+il compito sta girando con un utente che non appartiene al gruppo `docker`. Non c'e'
+niente da correggere nello script: **Control Panel → Task Scheduler → il compito →
+Edit → General → User: `root`**. E' lo stesso motivo per cui l'utente e' indicato come
+`root` qui sopra, e capita tipicamente quando il compito viene ricreato in fretta o
+duplicato da un altro.
+
+Il sintomo e' riconoscibile: il job dura un secondo e si ferma subito dopo la riga
+"Immagine assente: la costruisco".
+
 ### La raccolta sembra ferma
 
 Con la Browse API non dovrebbe succedere: l'intera raccolta dura circa 90 secondi e ogni
