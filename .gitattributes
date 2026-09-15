@@ -1,0 +1,13 @@
+# Il repository si modifica su Windows e si esegue sul NAS, dove /bin/sh
+# tratta il \r finale come parte del comando: un solo file di shell salvato
+# con le terminazioni di Windows fa fallire l'aggiornamento notturno con
+# "$'\r': command not found". Qui si fissa una volta per tutte che nel
+# deposito e nella copia di lavoro le righe finiscono con LF.
+* text=auto eol=lf
+
+# Dati e sorgenti che non devono essere toccati dalla normalizzazione.
+*.json -text
+*.png binary
+*.jpg binary
+*.ico binary
+*.webp binary
